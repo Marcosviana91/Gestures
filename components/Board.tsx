@@ -282,7 +282,7 @@ export default function Board(props: BoardProps) {
             }}>
                 <Image
                     style={[style.image]}
-                    source={require('@/assets/images/boards/faith_battle_alpha_gelo.png')}
+                    source={require('@/assets/images/boards/faith_battle_alpha_gelo.jpg')}
                 />
             </View>
             {/* Wisdom */}
