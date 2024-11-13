@@ -1,0 +1,1 @@
+export const CARD_HOVER = 500
