@@ -1,16 +1,16 @@
 import useWebSocket from 'react-use-websocket';
 
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { RootReducer } from '@/store';
-import { setPlayers } from '@/store/reducers/cardMatchReducer';
 import { game } from '@/utils/game';
 
+// const URL = 'marcosvianadev2.ddns.net:3112'
+const URL = '192.168.1.32:3112'
 
 export default function useAppWebSocket() {
-    const dispatch = useDispatch();
     const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
     // const playersStore = useSelector((state: RootReducer) => state.cardMatchReducer.players)
-    const WS = useWebSocket("ws://marcosvianadev2.ddns.net:3112/ws/flat", {
+    const WS = useWebSocket(`ws://${URL}/ws/flat`, {
         share: true,
         onOpen: () => {
             // console.log({
@@ -24,7 +24,7 @@ export default function useAppWebSocket() {
                 {
                     "data_type": "create_connection",
                     "player_data": {
-                        "name": fakeUserData.name,
+                        "user_id": fakeUserData.name,
                     }
                 }
             )
@@ -40,18 +40,17 @@ export default function useAppWebSocket() {
                     }
                 })
             }
-            if (msg.data_type == 'start' && msg.room_stats) {
-                dispatch(setPlayers(msg.room_stats.players))
+            if (msg.data_type == 'room_stats' && msg.room_stats) {
+                game.reset()
+                game.id = msg.room_stats.id
+                game.players = msg.room_stats.players
+                game.players_ready = msg.room_stats.players_ready
+            }
+            if (msg.data_type == 'match_stats' && msg.room_stats) {
+                game.reset()
                 game.id = msg.room_stats.id
                 game.players = msg.room_stats.players
                 game.players_stats = msg.room_stats.players_stats
-                console.log(game)
-            }
-            if (msg.data_type == 'card_move') {
-                // if (msg.player !== fakeUserData.name) {
-                // console.log("Oponent card_move")
-                game.setCardsOrder(msg.card!)
-                // }
             }
             if (msg.data_type == 'give_card') {
                 console.log("Recebeu uma carta")
@@ -62,6 +61,12 @@ export default function useAppWebSocket() {
                     // TODO: exibir deck vazio
                     console.log("Não tem mais cartas")
                 }
+            }
+            if (msg.data_type == 'card_move') {
+                // if (msg.player !== fakeUserData.name) {
+                // console.log("Oponent card_move")
+                game.setCardsOrder(msg.card!)
+                // }
             }
             if (msg.data_type == 'back_to_deck') {
                 console.log("Devolver ao deck")
@@ -81,9 +86,10 @@ export default function useAppWebSocket() {
             if (msg.data_type == 'change_faith_points') {
                 game.changeFaithPoints(msg.player!, msg.faith_points!)
             }
+            console.log(game)
         },
         shouldReconnect: () => Boolean(1),
-        reconnectInterval: 50,
+        reconnectInterval: 1500,
         retryOnError: true,
     })
 

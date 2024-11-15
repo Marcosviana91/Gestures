@@ -4,6 +4,7 @@ import { ConnectionStatus } from "./connectionSpot";
 import { useDispatch, useSelector } from "react-redux";
 import { RootReducer } from "@/store";
 import { logout } from "@/store/reducers/fakeAuthReducer";
+import { game } from '@/utils/game';
 
 
 export default function Header() {
@@ -14,9 +15,12 @@ export default function Header() {
             <Text>Sala: {fakeUserData.match}</Text>
             <Text>Nome: {fakeUserData.name}</Text>
             <Pressable
-                onPress={() => dispatch(logout())}>
+                onPress={() => {
+                    dispatch(logout())
+                    game.reset()
+                }}>
                 <View style={{ borderWidth: 1, borderRadius: 8, width: 75, backgroundColor: '#f33', justifyContent: 'center', alignItems: 'center' }}>
-                    <Text>Sair</Text>
+                    <Text>Logout</Text>
                 </View>
             </Pressable>
             {/* <ConnectionStatus wsState={props.wsState} /> */}

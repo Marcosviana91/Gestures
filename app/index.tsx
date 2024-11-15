@@ -17,9 +17,6 @@ import Header from "@/components/Header";
 export default function App() {
     const dispatch = useDispatch();
     const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
-    const playersStore = useSelector((state: RootReducer) => state.cardMatchReducer.players)
-
-
 
     const [name, setName] = useState("")
     const [sala, setSala] = useState("")

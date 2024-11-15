@@ -1,7 +1,7 @@
 import { Image, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 // import { setPlayers } from '@/store/reducers/cardMatchReducer';
 
 import useAppWebSocket from '@/hooks/useAppWebSocket'
@@ -11,14 +11,13 @@ import { BOARD_WIDTH, BOARD_HEIGHT, CARD_HEIGHT } from '@/constants/Sizes';
 import { RootReducer } from '@/store';
 // import { useEffect } from 'react';
 import { game } from '@/utils/game';
+import Room from './Room';
 
 export default function Table() {
     // console.log("Renderizou Table")
     const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
     // const dispatch = useDispatch()
     const WS = useAppWebSocket()
-
-    // console.log("Table/players", players) 
 
     const oponentes_list = game.players.filter(p => p !== fakeUserData.name)
     // console.log("oponentes_list", oponentes_list)
@@ -100,6 +99,12 @@ export default function Table() {
         WS.sendJsonMessage(data)
     }
 
+    if (game.players_stats.length < 1) {
+        return <>
+            <Room sendWS={WS.sendJsonMessage} />
+        </>
+    }
+
     return (
         <Animated.View style={style.container}>
             <Image
@@ -108,13 +113,13 @@ export default function Table() {
             />
             <GestureDetector gesture={drag}>
                 <Animated.View style={boardStyle}>
-                    <View style={{zIndex:10}}>
-                    <Board player_name={fakeUserData.name} sendToWS={sendMoveToServer} />
+                    <View style={{ zIndex: 10 }}>
+                        <Board player_name={fakeUserData.name} sendToWS={sendMoveToServer} />
 
                     </View>
                     {/* Oponente 1 */}
                     <View style={{
-                        bottom: BOARD_HEIGHT*2,
+                        bottom: BOARD_HEIGHT * 2,
                         left: BOARD_WIDTH,
                         transform: [
                             {

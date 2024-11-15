@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Image, Pressable } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming, runOnJS } from 'react-native-reanimated';
 
@@ -12,10 +12,13 @@ import { CARD_HOVER } from '@/constants/Timers';
 
 import { getCardImage, getCardImageMini } from '@/hooks/useCards';
 import { game } from '@/utils/game';
+import { ThemedModal } from './themed/ThemedModal';
+import { ThemedView } from './themed/ThemedView';
+import { ThemedText } from './themed/ThemedText';
 
 type Props = {
     card_id: string,
-    sendToWS: (card: CardProps) => void
+    sendToWS: (data: { data_type: string, card?: CardProps }) => void
 }
 
 export default function Card({ card_id, sendToWS }: Props) {
@@ -23,10 +26,12 @@ export default function Card({ card_id, sendToWS }: Props) {
     const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
     const player_card_id = card_id.split('_')[0]
     const player_data = game.getPlayerData(player_card_id)
-    const card_game = [...player_data?.card_hand!, ...player_data?.card_playmat!]
+    const card_game = [...player_data?.cards_in_game!]
     const card = card_game!.find(card => card.in_game_id === card_id)
     const is_hidden = (player_card_id !== fakeUserData.name && card?.where_i_am === 'hand');
     const [isCollided, setIsCollided] = useState(false)
+    const [showAttachedCardDescription, setShowAttachedCardDescription] = useState(false)
+    const [selectedInnerCard, setSelectedInnerCard] = useState<CardProps>()
 
     // cópia manipulável do card
     var _card: CardProps = { ...card! }
@@ -34,11 +39,6 @@ export default function Card({ card_id, sendToWS }: Props) {
     const cardBottom = useSharedValue(_card.position.bottom ? _card.position.bottom : 0);
     const cardLeft = useSharedValue(_card.position.left ? _card.position.left : 0);
     const zIndex = useSharedValue(0);
-
-    const oldPosition = useSharedValue({
-        bottom: 0,
-        left: 0,
-    });
 
     // TODO Renderizar as cartas individualmente
 
@@ -60,7 +60,17 @@ export default function Card({ card_id, sendToWS }: Props) {
         checkCollision(cardLeft.value, cardBottom.value, true)
         console.log("updateCardProps", _card)
         game.setCardsOrder({ ..._card })
-        sendToWS({ ..._card })
+        if (_card.where_i_am === 'playmat' || _card.where_i_am === 'hand') {
+            sendToWS({
+                data_type: 'card_move',
+                card: _card
+            })
+        } else if (_card.where_i_am === 'deck') {
+            sendToWS({
+                data_type: 'back_to_deck',
+                card: _card
+            })
+        }
     }
 
     function checkYposition() {
@@ -114,110 +124,74 @@ export default function Card({ card_id, sendToWS }: Props) {
             else {
                 setIsCollided(true)
             }
-        } else {
+        }
+        else {
             setIsCollided(false)
         }
-        // if (
-        //     (
-        //         left + CARD_WIDTH > _card.position?.left &&
-        //         position.left < _card.position?.left + CARD_WIDTH
-        //     ) &&
-        //     (
-        //         _card.position?.bottom &&
-        //         position.bottom + CARD_HEIGHT > _card.position?.bottom &&
-        //         position.bottom < _card.position?.bottom + CARD_HEIGHT
-        //     )
-        // ) {
-        // console.log('Colidindo com:', _card.in_game_id)
-        // TODO: refatorar checkCollision
-        // cards.map(_card => {
-        //     if (_card.in_game_id !== card_id) {
-        //         if (
-        //             (
-        //                 _card.position?.left &&
-        //                 position.left + CARD_WIDTH > _card.position?.left &&
-        //                 position.left < _card.position?.left + CARD_WIDTH
-        //             ) &&
-        //             (
-        //                 _card.position?.bottom &&
-        //                 position.bottom + CARD_HEIGHT > _card.position?.bottom &&
-        //                 position.bottom < _card.position?.bottom + CARD_HEIGHT
-        //             )
-        //         ) {
-        //             // console.log('Colidindo com:', _card.in_game_id)
-        //             collision = true
-        //             collidedCard = _card
-        //             setTimeout(() => {
-        //                 hoverCard = _card
-        //             }, CARD_HOVER)
-        //         }
-        //     }
-        // })
-        // checkHover()
-        // if (!collision) {
-        //     // console.log('Colidindo com nada')
-        //     collidedCard = undefined
-        //     hoverCard = undefined
-        //     setHoveredCard(undefined)
-        // }
+        if (_card.where_i_am === 'playmat') {
+            card_game.forEach(card_to_check => {
+                if (card_to_check.where_i_am === 'playmat' && card_to_check.in_game_id != _card.in_game_id) {
+                    if (
+                        (left > card_to_check.position.left - (CARD_WIDTH / 2)) &&
+                        (left < card_to_check.position.left + (CARD_WIDTH / 2)) &&
+                        (bottom > card_to_check.position.bottom - (CARD_HEIGHT / 2)) &&
+                        (bottom < card_to_check.position.bottom + (CARD_HEIGHT / 2))
+                    ) {
+                        setIsCollided(true)
+                        if (endMove) {
+                            setIsCollided(false)
+                            _card = { ..._card, where_i_am: "attached" }
+                            console.log(`Acoplar a carta ${_card.in_game_id} na carta ${card_to_check.in_game_id} `)
+                            // card_to_check.attached_cards.push(_card)
+                            // const _card_target: CardProps = { ..._card, attached_cards: [] }
+                            card_to_check.attached_cards = [...card_to_check.attached_cards, _card]
+                            console.log(card_to_check)
+                            sendToWS({
+                                data_type: 'attach_card',
+                                card: { ...card_to_check }
+                            })
+                        }
+                    }
+                }
+            })
+        }
     }
 
     // TODO: Mudar para abrir modal onde será possível alterar os atributos da carta
     const tapCard = Gesture.Tap()
         .numberOfTaps(1)
         .onStart(() => {
-            if (!bigger) {
-                runOnJS(setBigger)(true)
-                oldPosition.value = {
-                    bottom: cardBottom.value,
-                    left: cardLeft.value,
-                }
-                cardBottom.value = withTiming(BOARD_POSITIONS.Playmat.bottom),
-                    cardLeft.value = withTiming((BOARD_WIDTH - CARD_WIDTH * 6) / 2),
-                    zIndex.value = 999
-            } else {
-                runOnJS(setBigger)(false)
-                cardBottom.value = withTiming(oldPosition.value.bottom),
-                    cardLeft.value = withTiming(oldPosition.value.left),
-                    zIndex.value = withDelay(100, withTiming(0))
-            }
+            runOnJS(setBigger)(true)
         });
-
 
     const drag = Gesture.Pan()
         .minDistance(5)
         .onStart(() => {
             if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
-                if (!bigger) {
-                    zIndex.value = 999
-                }
+                zIndex.value = 999
             }
         })
         .onChange((event) => {
             if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
-                if (!bigger) {
-                    cardBottom.value -= event.changeY;
-                    cardLeft.value += event.changeX;
-                    checkCollision(cardLeft.value, cardBottom.value, false)
-                }
+                cardBottom.value -= event.changeY;
+                cardLeft.value += event.changeX;
+                checkCollision(cardLeft.value, cardBottom.value, false)
             }
         })
         .onEnd(() => {
             if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
-                if (!bigger) {
-                    zIndex.value = withDelay(100, withTiming(0))
-                    updateCardProps()
-                }
+                zIndex.value = withDelay(100, withTiming(0))
+                updateCardProps()
             }
-            console.log('Bottom: ', cardBottom.value)
-            console.log('Left: ', cardLeft.value)
+            // console.log('Bottom: ', cardBottom.value)
+            // console.log('Left: ', cardLeft.value)
         })
         .runOnJS(true)
 
     const imageStyle = useAnimatedStyle(() => {
         return {
-            width: withTiming(bigger ? CARD_WIDTH * 6 : CARD_WIDTH),
-            height: withTiming(bigger ? CARD_HEIGHT * 6 : CARD_HEIGHT),
+            width: CARD_WIDTH,
+            height: CARD_HEIGHT,
             // borderColor: withTiming(isSelected ? '#ff0f' : '#fff0'),
             borderRadius: 4,
             borderWidth: 2,
@@ -240,25 +214,15 @@ export default function Card({ card_id, sendToWS }: Props) {
 
 
     return (
-        <GestureDetector gesture={tapCard}>
-            <Animated.View style={[containerStyle]}>
-                <GestureDetector gesture={drag}>
-                    <Animated.View>
-                        {(bigger || false) &&
-                            <Animated.Text>{_card.where_i_am}</Animated.Text>
-                        }
-                        {bigger ?
-                            (<Animated.Image
-                                source={
-                                    is_hidden ?
-                                        getCardImage({ card_slug: 'card-back' }) :
-                                        getCardImage({ card_slug: _card.slug! })
-
-                                }
-                                resizeMode="contain"
-                                style={imageStyle}
-                            />) :
-                            (<View>
+        <>
+            <GestureDetector gesture={tapCard}>
+                <Animated.View style={[containerStyle]}>
+                    <GestureDetector gesture={drag}>
+                        <Animated.View>
+                            {(bigger || false) &&
+                                <Animated.Text>{_card.where_i_am}</Animated.Text>
+                            }
+                            <View>
                                 <Animated.Image
                                     source={
                                         is_hidden ?
@@ -280,12 +244,123 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         </View>
                                     </>
                                 }
-                            </View>)
-                        }
-                    </Animated.View>
-                </GestureDetector>
-            </Animated.View>
-        </GestureDetector>
+                            </View>
+                        </Animated.View>
+                    </GestureDetector>
+                </Animated.View>
+            </GestureDetector>
+            <ThemedModal
+                title='Detalhes'
+                backgroundTransparent
+                closeModal={() => {
+                    setBigger(false)
+                    setShowAttachedCardDescription(false)
+                }}
+                visible={bigger}
+            >
+                <View style={{ width: CARD_WIDTH * 6, alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 }}>
+                    <Image source={
+                        getCardImage({ card_slug: _card.slug! })
+                    }
+                        resizeMode="contain"
+                        style={{ height: CARD_HEIGHT * 6 }}
+                    />
+                    {/* Descrição do artefato */}
+                    {showAttachedCardDescription &&
+                        <Pressable
+                            style={{ position: 'absolute', top: CARD_HEIGHT * 2, zIndex: 999, }}
+                            onPress={() => {
+                                setShowAttachedCardDescription(false)
+                            }}
+                        >
+                            <ThemedView style={{ width: CARD_WIDTH * 6, height: 200, borderRadius: 8, borderWidth: 1, padding: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+                                <ThemedText>
+                                    {/* TODO: Pegar descrição da carta */}
+                                    Pegar descrição da carta
+                                </ThemedText>
+                                {player_card_id == fakeUserData.name &&
+                                    <Pressable
+                                        style={{ borderWidth: 1, borderColor: '#575757', borderRadius: 8, padding: 8 }}
+                                        onPress={() => {
+                                            console.log("Remover ", selectedInnerCard?.in_game_id, 'de', _card.in_game_id)
+                                            if (selectedInnerCard) {
+                                                sendToWS({
+                                                    data_type: 'dettach_card',
+                                                    card: {
+                                                        ..._card,
+                                                        attached_cards: [selectedInnerCard!]
+                                                    }
+                                                })
+                                            }
+                                            setShowAttachedCardDescription(false)
+                                            setBigger(false)
+                                        }}
+                                    >
+                                        <ThemedText>Remover Carta</ThemedText>
+                                    </Pressable>
+                                }
+                            </ThemedView>
+
+                        </Pressable>
+                    }
+                    {/* Atributos da carta */}
+                    <Text style={{
+                        backgroundColor: '#000000b2',
+                        position: 'absolute', top: 8, left: 8,
+                        width: 32, borderRadius: 8,
+                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                        color: 'white',
+                    }}>{card?.top_left_value}</Text>
+                    <Text style={{
+                        backgroundColor: '#000000b2',
+                        position: 'absolute', top: 8, right: 8,
+                        width: 32, borderRadius: 8,
+                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                        color: 'white'
+                    }}>{card?.top_right_value}</Text>
+                    <Text style={{
+                        backgroundColor: '#000000b2',
+                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, left: 8,
+                        width: 32, borderRadius: 8,
+                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                        color: 'white'
+                    }}>{card?.bottom_left_value}</Text>
+                    <Text style={{
+                        backgroundColor: '#000000b2',
+                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, right: 8,
+                        width: 32, borderRadius: 8,
+                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                        color: 'white'
+                    }}>{card?.bottom_right_value}</Text>
+                    {/* Attached Cards */}
+                    {_card.attached_cards.length > 0 &&
+                        <View style={{ width: '90%', height: CARD_HEIGHT + 17, paddingVertical: 8, alignItems: 'center', borderColor: '#6e6e6e', borderWidth: 1, borderRadius: 8 }}>
+                            <ScrollView horizontal >
+                                {_card.attached_cards.map(attached_card => (
+                                    <>
+                                        <Pressable
+                                        key={attached_card.in_game_id}
+                                            onPress={() => {
+                                                setShowAttachedCardDescription(!showAttachedCardDescription)
+                                                setSelectedInnerCard(attached_card)
+                                            }}
+                                        >
+                                            <Image key={attached_card.in_game_id} source={
+                                                getCardImageMini({ card_slug: attached_card.slug! })
+                                            }
+                                                resizeMode="contain"
+                                                style={{ maxHeight: CARD_HEIGHT }}
+                                            />
+                                        </Pressable>
+                                    </>
+                                ))}
+                            </ScrollView>
+                        </View>
+
+                    }
+                </View>
+            </ThemedModal>
+        </>
     );
 }
 

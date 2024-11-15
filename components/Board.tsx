@@ -36,7 +36,7 @@ export default function Board(props: BoardProps) {
     const [cardDeck, setCardDeck] = useState<CardProps[]>([])
 
     const player_data = game.getPlayerData(props.player_name)
-    var card_game = player_data?.card_hand
+    var card_game = player_data?.cards_in_game
 
     useEffect(() => {
         if (player_data && player_data.total_wisdom_points) {
@@ -76,7 +76,8 @@ export default function Board(props: BoardProps) {
             setShowCardMenu(false)
         }).runOnJS(true);
 
-    const giveWisdomPress = Gesture.LongPress()
+    const giveWisdomTap = Gesture.Tap()
+        .numberOfTaps(2)
         .onStart(() => {
             if (availableWisdom.length <= 9) {
                 props.sendToWS({
@@ -87,8 +88,7 @@ export default function Board(props: BoardProps) {
             }
         }).runOnJS(true);
 
-    const takeWisdomTap = Gesture.Tap()
-        .numberOfTaps(2)
+    const takeWisdomPress = Gesture.LongPress()
         .onStart(() => {
             if (availableWisdom.length > 0) {
                 props.sendToWS({
@@ -125,23 +125,13 @@ export default function Board(props: BoardProps) {
         })
         .runOnJS(true);
 
-    function sendMoveToServer(card: CardProps) {
-        console.log("sendMoveToServer", card)
-        if (card.where_i_am === 'playmat' || card.where_i_am === 'hand') {
-            props.sendToWS({
-                data_type: 'card_move',
-                match: fakeUserData.match,
-                player: fakeUserData.name,
-                card: card
-            })
-        } else if (card.where_i_am === 'deck') {
-            props.sendToWS({
-                data_type: 'back_to_deck',
-                match: fakeUserData.match,
-                player: fakeUserData.name,
-                card: card
-            })
-        }
+    function sendMoveToServer(data: { data_type: string, card?: CardProps }) {
+        props.sendToWS({
+            data_type: data.data_type,
+            match: fakeUserData.match,
+            player: fakeUserData.name,
+            card: data.card
+        })
     }
     function getCardFromServer(card: CardProps) {
         setShowAllDeck(false)
@@ -234,7 +224,7 @@ export default function Board(props: BoardProps) {
                                     <Pressable
                                         onPress={() => {
                                             console.log("VER CARTAS")
-                                            const cards = player_data?.card_deck.map(card => card)
+                                            const cards = player_data?.cards_deck.map(card => card)
                                             setCardDeck(cards!)
                                             setShowCardMenu(false)
                                             setShowAllDeck(true)
@@ -254,8 +244,8 @@ export default function Board(props: BoardProps) {
             }
             {/* WISDOM DECK */}
             {!props.enemy &&
-                <GestureDetector gesture={takeWisdomTap}>
-                    <GestureDetector gesture={giveWisdomPress}>
+                <GestureDetector gesture={takeWisdomPress}>
+                    <GestureDetector gesture={giveWisdomTap}>
                         <View style={{
                             backgroundColor: '#afa',
                             position: 'absolute',
@@ -293,6 +283,9 @@ export default function Board(props: BoardProps) {
             {/* Cartas */}
             <View style={{ zIndex: 999 }}>
                 {card_game && card_game.map((card, _index) => {
+                    if (card.where_i_am == 'attached') {
+                        return undefined
+                    }
                     return (
                         <Card
                             key={card.in_game_id}
