@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react';
 import { View, Text, Image, Pressable, ScrollView } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming, runOnJS } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 import { useSelector } from 'react-redux';
 import { RootReducer } from '@/store';
 
 import { BOARD_POSITIONS } from '@/constants/Positions';
 import { BOARD_WIDTH, CARD_HEIGHT, CARD_PADDING_X, CARD_WIDTH } from '@/constants/Sizes';
-import { CARD_HOVER } from '@/constants/Timers';
 
 import { getCardImage, getCardImageMini } from '@/hooks/useCards';
 import { game } from '@/utils/game';
@@ -16,9 +15,11 @@ import { ThemedModal } from './themed/ThemedModal';
 import { ThemedView } from './themed/ThemedView';
 import { ThemedText } from './themed/ThemedText';
 
+import AntDesign from '@expo/vector-icons/AntDesign';
+
 type Props = {
     card_id: string,
-    sendToWS: (data: { data_type: string, card?: CardProps }) => void
+    sendToWS: (data: { data_type: string, card?: CardProps, change_points?: number }) => void
 }
 
 export default function Card({ card_id, sendToWS }: Props) {
@@ -28,10 +29,21 @@ export default function Card({ card_id, sendToWS }: Props) {
     const player_data = game.getPlayerData(player_card_id)
     const card_game = [...player_data?.cards_in_game!]
     const card = card_game!.find(card => card.in_game_id === card_id)
+    const card_is_mine = fakeUserData.name === card?.in_game_id.split('_')[0]
     const is_hidden = (player_card_id !== fakeUserData.name && card?.where_i_am === 'hand');
     const [isCollided, setIsCollided] = useState(false)
     const [showAttachedCardDescription, setShowAttachedCardDescription] = useState(false)
     const [selectedInnerCard, setSelectedInnerCard] = useState<CardProps>()
+
+    // Card Params Values and Controls
+    const [showTopLeftValueControls, setShowTopLeftValueControls] = useState(false);
+    const [topLeftValue, setTopLeftValue] = useState(0);
+    const [showTopRightValueControls, setShowTopRightValueControls] = useState(false);
+    const [topRightValue, setTopRightValue] = useState(0);
+    const [showBottomLeftValueControls, setShowBottomLeftValueControls] = useState(false);
+    const [bottomLeftValue, setBottomLeftValue] = useState(0);
+    const [showBottomRightValueControls, setShowBottomRightValueControls] = useState(false);
+    const [bottomRightValue, setBottomRightValue] = useState(0);
 
     // cópia manipulável do card
     var _card: CardProps = { ...card! }
@@ -161,30 +173,135 @@ export default function Card({ card_id, sendToWS }: Props) {
     const tapCard = Gesture.Tap()
         .numberOfTaps(1)
         .onStart(() => {
-            runOnJS(setBigger)(true)
-        });
+            if (!is_hidden) {
+                setBigger(!bigger)
+
+            }
+        })
+        .runOnJS(true)
 
     const drag = Gesture.Pan()
         .minDistance(5)
         .onStart(() => {
-            if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
+            if (card_is_mine) {
                 zIndex.value = 999
             }
         })
         .onChange((event) => {
-            if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
+            if (card_is_mine) {
                 cardBottom.value -= event.changeY;
                 cardLeft.value += event.changeX;
                 checkCollision(cardLeft.value, cardBottom.value, false)
             }
         })
         .onEnd(() => {
-            if (fakeUserData.name === card?.in_game_id.split('_')[0]) {
+            if (card_is_mine) {
                 zIndex.value = withDelay(100, withTiming(0))
                 updateCardProps()
             }
             // console.log('Bottom: ', cardBottom.value)
             // console.log('Left: ', cardLeft.value)
+        })
+        .runOnJS(true)
+
+    const changeTopLeftValue = Gesture.Pan()
+        .minDistance(0)
+        .onStart(() => {
+            if (card_is_mine) {
+                console.log("changeTopLeftValue")
+                setShowTopLeftValueControls(true)
+            }
+        })
+        .onChange((event) => {
+            if (card_is_mine) {
+                setTopLeftValue(Math.ceil(-1 * event.translationY / 50))
+            }
+        })
+        .onEnd(() => {
+            if (card_is_mine) {
+                setShowTopLeftValueControls(false)
+                if (topLeftValue !== 0) {
+                    sendToWS({
+                        data_type: 'change_top_left_value',
+                        change_points: topLeftValue,
+                    })
+                }
+            }
+        })
+        .runOnJS(true)
+
+    const changeTopRightValue = Gesture.Pan()
+        .minDistance(0)
+        .onStart(() => {
+            if (card_is_mine) {
+                setShowTopRightValueControls(true)
+            }
+        })
+        .onChange((event) => {
+            if (card_is_mine) {
+                setTopRightValue(Math.ceil(-1 * event.translationY / 50))
+            }
+        })
+        .onEnd(() => {
+            if (card_is_mine) {
+                setShowTopRightValueControls(false)
+                if (topRightValue !== 0) {
+                    sendToWS({
+                        data_type: 'change_top_right_value',
+                        change_points: topRightValue,
+                    })
+                }
+            }
+        })
+        .runOnJS(true)
+
+    const changeBottomLeftValue = Gesture.Pan()
+        .minDistance(0)
+        .onStart(() => {
+            if (card_is_mine) {
+                setShowBottomLeftValueControls(true)
+            }
+        })
+        .onChange((event) => {
+            if (card_is_mine) {
+                setBottomLeftValue(Math.ceil(-1 * event.translationY / 50))
+            }
+        })
+        .onEnd(() => {
+            if (card_is_mine) {
+                setShowBottomLeftValueControls(false)
+                if (bottomLeftValue !== 0) {
+                    sendToWS({
+                        data_type: 'change_bottom_left_value',
+                        change_points: bottomLeftValue,
+                    })
+                }
+            }
+        })
+        .runOnJS(true)
+
+    const changeBottomRightValue = Gesture.Pan()
+        .minDistance(0)
+        .onStart(() => {
+            if (card_is_mine) {
+                setShowBottomRightValueControls(true)
+            }
+        })
+        .onChange((event) => {
+            if (card_is_mine) {
+                setBottomRightValue(Math.ceil(-1 * event.translationY / 50))
+            }
+        })
+        .onEnd(() => {
+            if (card_is_mine) {
+                setShowBottomRightValueControls(false)
+                if (bottomRightValue !== 0) {
+                    sendToWS({
+                        data_type: 'change_top_left_value',
+                        change_points: bottomRightValue,
+                    })
+                }
+            }
         })
         .runOnJS(true)
 
@@ -212,7 +329,181 @@ export default function Card({ card_id, sendToWS }: Props) {
         };
     });
 
+    if (bigger) {
+        return (
+            <>
+                <GestureDetector gesture={tapCard}>
+                    <ThemedView style={{ width: 550, height: 500, position: 'absolute', top: -850, zIndex: 9999, justifyContent: 'center', alignItems: 'center', borderRadius: 16 }}>
+                        <View style={{ width: CARD_WIDTH * 6, alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 }}>
+                            <Image source={
+                                getCardImage({ card_slug: _card.slug! })
+                            }
+                                resizeMode="contain"
+                                style={{ height: CARD_HEIGHT * 6 }}
+                            />
+                            {/* Atributos da carta */}
+                            {/* top_left_value */}
+                            {typeof (card?.top_left_value) == 'number' &&
+                                <GestureDetector gesture={changeTopLeftValue} >
+                                    <View style={{
+                                        backgroundColor: '#000000b2',
+                                        position: 'absolute', top: 8, left: 8,
+                                        width: 32, height: 48, borderRadius: 8,
+                                        zIndex: 999
+                                    }}>
+                                        {showTopLeftValueControls &&
+                                            <>
+                                                <AntDesign name="caretup" size={32} color="black" style={{ position: 'absolute', top: -20, color: '#0f0', opacity: topLeftValue > 0 ? 1 : .5 }} />
+                                                <ThemedText style={{ position: 'absolute', left: -30, fontSize: 32, lineHeight: 40 }}>{topLeftValue}</ThemedText>
+                                                <AntDesign name="caretdown" size={32} color="black" style={{ position: 'absolute', bottom: -20, color: '#f00', opacity: topLeftValue < 0 ? 1 : .5 }} />
+                                            </>
+                                        }
+                                        <Text style={{
+                                            textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                                            color: 'white',
+                                        }}>{card?.top_left_value}</Text>
 
+                                    </View>
+                                </GestureDetector>
+                            }
+                            {/* top_right_value */}
+                            {typeof (card?.top_right_value) == 'number' &&
+                                <GestureDetector gesture={changeTopRightValue} >
+                                    <View style={{
+                                        backgroundColor: '#000000b2',
+                                        position: 'absolute', top: 8, right: 8,
+                                        width: 32, height: 48, borderRadius: 8,
+                                    }}>
+                                        {showTopRightValueControls &&
+                                            <>
+                                                <ThemedText style={{ position: 'absolute', right: -30, fontSize: 32, lineHeight: 40 }}>{topRightValue}</ThemedText>
+                                                <AntDesign name="caretup" size={32} color="black" style={{ position: 'absolute', top: -20, color: '#0f0' }} />
+                                                <AntDesign name="caretdown" size={32} color="black" style={{ position: 'absolute', bottom: -20, color: '#f00' }} />
+                                            </>
+                                        }
+                                        <Text style={{
+                                            width: 32, borderRadius: 8,
+                                            textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                                            color: 'white'
+                                        }}>{card?.top_right_value}</Text>
+                                    </View>
+                                </GestureDetector>
+                            }
+                            {/* bottom_left_value */}
+                            {typeof (card?.bottom_left_value) == 'number' &&
+                                <GestureDetector gesture={changeBottomLeftValue} >
+                                    <View style={{
+                                        backgroundColor: '#000000b2',
+                                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, left: 8,
+                                        width: 32, height: 48, borderRadius: 8,
+                                    }}>
+                                        {showBottomLeftValueControls &&
+                                            <>
+                                                <AntDesign name="caretup" size={32} color="black" style={{ position: 'absolute', top: -20, color: '#0f0' }} />
+                                                <ThemedText style={{ position: 'absolute', left: -30, fontSize: 32, lineHeight: 40 }}>{bottomLeftValue}</ThemedText>
+                                                <AntDesign name="caretdown" size={32} color="black" style={{ position: 'absolute', bottom: -20, color: '#f00' }} />
+                                            </>
+                                        }
+                                        <Text style={{
+                                            textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                                            color: 'white'
+                                        }}>{card?.bottom_left_value}</Text>
+                                    </View>
+                                </GestureDetector>
+                            }
+                            {/* bottom_right_value */}
+                            {typeof (card?.bottom_right_value) == 'number' &&
+                                <GestureDetector gesture={changeBottomRightValue} >
+                                    <View style={{
+                                        backgroundColor: '#000000b2',
+                                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, right: 8,
+                                        width: 32, height: 48, borderRadius: 8,
+                                    }}>
+                                        {showBottomRightValueControls &&
+                                            <>
+                                                <ThemedText style={{ position: 'absolute', right: -30, fontSize: 32, lineHeight: 40 }}>{bottomRightValue}</ThemedText>
+                                                <AntDesign name="caretup" size={32} color="black" style={{ position: 'absolute', top: -20, color: '#0f0' }} />
+                                                <AntDesign name="caretdown" size={32} color="black" style={{ position: 'absolute', bottom: -20, color: '#f00' }} />
+                                            </>
+                                        }
+                                        <Text style={{
+                                            textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
+                                            color: 'white'
+                                        }}>{card?.bottom_right_value}</Text>
+                                    </View>
+                                </GestureDetector>
+                            }
+                            {/* Attached Cards */}
+
+                        </View>
+                    </ThemedView>
+                </GestureDetector>
+                {_card.attached_cards.length > 0 &&
+                    <ThemedView style={{ width: 550, height: 200, position: 'absolute', top: -340, zIndex: 9999, justifyContent: 'center', alignItems: 'center', borderRadius: 16 }}>
+                        <View style={{ width: '90%', height: CARD_HEIGHT + 17, paddingVertical: 8, alignItems: 'center', borderColor: '#6e6e6e', borderWidth: 1, borderRadius: 8 }}>
+                            <ScrollView horizontal >
+                                {_card.attached_cards.map(attached_card => (
+                                    <Pressable
+                                        key={attached_card.in_game_id}
+                                        onPress={() => {
+                                            setShowAttachedCardDescription(!showAttachedCardDescription)
+                                            setSelectedInnerCard(attached_card)
+                                        }}
+                                    >
+                                        <Image key={attached_card.in_game_id} source={
+                                            getCardImageMini({ card_slug: attached_card.slug! })
+                                        }
+                                            resizeMode="contain"
+                                            style={{ maxHeight: CARD_HEIGHT }}
+                                        />
+                                    </Pressable>
+                                ))}
+                            </ScrollView>
+                        </View>
+                        {/* Descrição do artefato */}
+                        {showAttachedCardDescription &&
+                            <Pressable
+                                style={{ position: 'absolute', top: -CARD_HEIGHT * 3, zIndex: 999, }}
+                                onPress={() => {
+                                    setShowAttachedCardDescription(false)
+                                }}
+                            >
+                                <ThemedView style={{ width: CARD_WIDTH * 8, height: 200, borderRadius: 8, borderWidth: 1, padding: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <ThemedText type='subtitle'>{selectedInnerCard?.slug.replaceAll('-', ' ').toUpperCase()}</ThemedText>
+                                    <ThemedText>
+                                        {/* TODO: Pegar descrição da carta */}
+                                        Pegar descrição da carta
+                                    </ThemedText>
+                                    {player_card_id == fakeUserData.name &&
+                                        <Pressable
+                                            style={{ borderWidth: 1, borderColor: '#575757', borderRadius: 8, padding: 8 }}
+                                            onPress={() => {
+                                                console.log("Remover ", selectedInnerCard?.in_game_id, 'de', _card.in_game_id)
+                                                if (selectedInnerCard) {
+                                                    sendToWS({
+                                                        data_type: 'dettach_card',
+                                                        card: {
+                                                            ..._card,
+                                                            attached_cards: [selectedInnerCard!]
+                                                        }
+                                                    })
+                                                }
+                                                setShowAttachedCardDescription(false)
+                                                setBigger(false)
+                                            }}
+                                        >
+                                            <ThemedText>Remover Carta</ThemedText>
+                                        </Pressable>
+                                    }
+                                </ThemedView>
+
+                            </Pressable>
+                        }
+                    </ThemedView>
+                }
+            </>
+        )
+    }
     return (
         <>
             <GestureDetector gesture={tapCard}>
@@ -249,117 +540,6 @@ export default function Card({ card_id, sendToWS }: Props) {
                     </GestureDetector>
                 </Animated.View>
             </GestureDetector>
-            <ThemedModal
-                title='Detalhes'
-                backgroundTransparent
-                closeModal={() => {
-                    setBigger(false)
-                    setShowAttachedCardDescription(false)
-                }}
-                visible={bigger}
-            >
-                <View style={{ width: CARD_WIDTH * 6, alignItems: 'center', justifyContent: 'flex-end', rowGap: 8 }}>
-                    <Image source={
-                        getCardImage({ card_slug: _card.slug! })
-                    }
-                        resizeMode="contain"
-                        style={{ height: CARD_HEIGHT * 6 }}
-                    />
-                    {/* Descrição do artefato */}
-                    {showAttachedCardDescription &&
-                        <Pressable
-                            style={{ position: 'absolute', top: CARD_HEIGHT * 2, zIndex: 999, }}
-                            onPress={() => {
-                                setShowAttachedCardDescription(false)
-                            }}
-                        >
-                            <ThemedView style={{ width: CARD_WIDTH * 6, height: 200, borderRadius: 8, borderWidth: 1, padding: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-                                <ThemedText>
-                                    {/* TODO: Pegar descrição da carta */}
-                                    Pegar descrição da carta
-                                </ThemedText>
-                                {player_card_id == fakeUserData.name &&
-                                    <Pressable
-                                        style={{ borderWidth: 1, borderColor: '#575757', borderRadius: 8, padding: 8 }}
-                                        onPress={() => {
-                                            console.log("Remover ", selectedInnerCard?.in_game_id, 'de', _card.in_game_id)
-                                            if (selectedInnerCard) {
-                                                sendToWS({
-                                                    data_type: 'dettach_card',
-                                                    card: {
-                                                        ..._card,
-                                                        attached_cards: [selectedInnerCard!]
-                                                    }
-                                                })
-                                            }
-                                            setShowAttachedCardDescription(false)
-                                            setBigger(false)
-                                        }}
-                                    >
-                                        <ThemedText>Remover Carta</ThemedText>
-                                    </Pressable>
-                                }
-                            </ThemedView>
-
-                        </Pressable>
-                    }
-                    {/* Atributos da carta */}
-                    <Text style={{
-                        backgroundColor: '#000000b2',
-                        position: 'absolute', top: 8, left: 8,
-                        width: 32, borderRadius: 8,
-                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
-                        color: 'white',
-                    }}>{card?.top_left_value}</Text>
-                    <Text style={{
-                        backgroundColor: '#000000b2',
-                        position: 'absolute', top: 8, right: 8,
-                        width: 32, borderRadius: 8,
-                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
-                        color: 'white'
-                    }}>{card?.top_right_value}</Text>
-                    <Text style={{
-                        backgroundColor: '#000000b2',
-                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, left: 8,
-                        width: 32, borderRadius: 8,
-                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
-                        color: 'white'
-                    }}>{card?.bottom_left_value}</Text>
-                    <Text style={{
-                        backgroundColor: '#000000b2',
-                        position: 'absolute', top: (CARD_HEIGHT * 6) - 54, right: 8,
-                        width: 32, borderRadius: 8,
-                        textAlign: 'center', fontWeight: '900', fontSize: 32, lineHeight: 40,
-                        color: 'white'
-                    }}>{card?.bottom_right_value}</Text>
-                    {/* Attached Cards */}
-                    {_card.attached_cards.length > 0 &&
-                        <View style={{ width: '90%', height: CARD_HEIGHT + 17, paddingVertical: 8, alignItems: 'center', borderColor: '#6e6e6e', borderWidth: 1, borderRadius: 8 }}>
-                            <ScrollView horizontal >
-                                {_card.attached_cards.map(attached_card => (
-                                    <>
-                                        <Pressable
-                                        key={attached_card.in_game_id}
-                                            onPress={() => {
-                                                setShowAttachedCardDescription(!showAttachedCardDescription)
-                                                setSelectedInnerCard(attached_card)
-                                            }}
-                                        >
-                                            <Image key={attached_card.in_game_id} source={
-                                                getCardImageMini({ card_slug: attached_card.slug! })
-                                            }
-                                                resizeMode="contain"
-                                                style={{ maxHeight: CARD_HEIGHT }}
-                                            />
-                                        </Pressable>
-                                    </>
-                                ))}
-                            </ScrollView>
-                        </View>
-
-                    }
-                </View>
-            </ThemedModal>
         </>
     );
 }

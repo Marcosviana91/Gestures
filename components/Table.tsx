@@ -1,11 +1,14 @@
 import { Image, View, StyleSheet, useWindowDimensions } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSelector } from 'react-redux';
 // import { setPlayers } from '@/store/reducers/cardMatchReducer';
 
 import useAppWebSocket from '@/hooks/useAppWebSocket'
 
+
+import Magnify from "@/components/Magnify";
+import Header from "@/components/Header";
 import Board from './Board';
 import { BOARD_WIDTH, BOARD_HEIGHT, CARD_HEIGHT } from '@/constants/Sizes';
 import { RootReducer } from '@/store';
@@ -28,6 +31,8 @@ export default function Table() {
     const BOARD_LEFT_START = width
     const boardsLeft = useSharedValue(BOARD_LEFT_START);
     const boardsBottom = useSharedValue(0);
+
+    const svScale = useSharedValue(1);
 
 
     // useEffect(() => {
@@ -95,42 +100,75 @@ export default function Table() {
         })
         .runOnJS(false)
 
-    function sendMoveToServer(data: { data_type: string, player: string, card?: CardProps }) {
+    function sendMoveToServer(data: {}) {
         WS.sendJsonMessage(data)
     }
+
+    const pinch = Gesture.Pinch()
+        .onStart(() => {
+        })
+        .onChange((event) => {
+            svScale.value *= event.scaleChange
+            // console.log(svScale.value)
+        })
+        .onEnd(() => {
+            if (svScale.value > 2) {
+                svScale.value = withTiming(2)
+            }
+            else if (svScale.value < 0.33) {
+                svScale.value = withTiming(0.33)
+            }
+        })
+
+    const containerStyle = useAnimatedStyle(() => {
+        return {
+            borderColor: 'black',
+            borderWidth: 1,
+            position: "absolute",
+            bottom: -(TABLE_HEIGHT * (1 - svScale.value)) / 2,
+            left: -TABLE_WIDTH / 3,
+            transform: [
+                {
+                    scale: svScale.value,
+                }
+            ]
+        };
+    });
 
     if (game.players_stats.length < 1) {
         return <>
             <Room sendWS={WS.sendJsonMessage} />
         </>
     }
-
     return (
-        <Animated.View style={style.container}>
-            <Image
-                style={style.background}
-                source={require('@/assets/images/wood.jpg')}
-            />
-            <GestureDetector gesture={drag}>
-                <Animated.View style={boardStyle}>
-                    <View style={{ zIndex: 10 }}>
-                        <Board player_name={fakeUserData.name} sendToWS={sendMoveToServer} />
-
-                    </View>
-                    {/* Oponente 1 */}
-                    <View style={{
-                        bottom: BOARD_HEIGHT * 2,
-                        left: BOARD_WIDTH,
-                        transform: [
-                            {
-                                rotate: '180deg',
-                            },
-                        ]
-                    }}>
-                        <Board enemy player_name={oponentes_list[0]} sendToWS={sendMoveToServer} />
-                    </View>
-                    {/* Oponente 2 */}
-                    {/* <View style={{
+        <GestureHandlerRootView  >
+            <Header sendWS={sendMoveToServer} />
+            <GestureDetector gesture={pinch}>
+                <Animated.View style={containerStyle} >
+                    <Animated.View style={style.container}>
+                        <Image
+                            style={style.background}
+                            source={require('@/assets/images/wood.jpg')}
+                        />
+                        <GestureDetector gesture={drag}>
+                            <Animated.View style={boardStyle}>
+                                <View style={{ zIndex: 10 }}>
+                                    <Board player_name={fakeUserData.name} sendToWS={sendMoveToServer} />
+                                </View>
+                                {/* Oponente 1 */}
+                                <View style={{
+                                    bottom: BOARD_HEIGHT * 2,
+                                    left: BOARD_WIDTH,
+                                    transform: [
+                                        {
+                                            rotate: '180deg',
+                                        },
+                                    ]
+                                }}>
+                                    <Board enemy player_name={oponentes_list[0]} sendToWS={sendMoveToServer} />
+                                </View>
+                                {/* Oponente 2 */}
+                                {/* <View style={{
                         bottom: 700,
                         left: 800,
                         transform:[
@@ -141,8 +179,12 @@ export default function Table() {
                     }}>
                         <Board />
                     </View> */}
-                </Animated.View>
+                            </Animated.View>
+                        </GestureDetector>
+                    </Animated.View>
+                </Animated.View >
             </GestureDetector>
-        </Animated.View>
+
+        </GestureHandlerRootView>
     )
 }

@@ -1,18 +1,12 @@
-import { useState, useEffect } from "react";
-import { useWindowDimensions, View, Text, TextInput, Pressable, Image } from "react-native";
-
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
+import { useState } from "react";
+import { View, Text, TextInput, Pressable } from "react-native";
 
 import { useDispatch, useSelector } from "react-redux";
 import { RootReducer } from "@/store";
-import { setPlayers, addCard, setCard } from '@/store/reducers/cardMatchReducer';
 
 import { login, logout } from "@/store/reducers/fakeAuthReducer";
 
 import Table from "@/components/Table";
-import Magnify from "@/components/Magnify";
-import Header from "@/components/Header";
 
 export default function App() {
     const dispatch = useDispatch();
@@ -20,44 +14,6 @@ export default function App() {
 
     const [name, setName] = useState("")
     const [sala, setSala] = useState("")
-
-    const { width } = useWindowDimensions()
-
-    const TABLE_WIDTH = width * 3
-    const TABLE_HEIGHT = 2600
-    const svScale = useSharedValue(1);
-
-    const pinch = Gesture.Pinch()
-        .onStart(() => {
-        })
-        .onChange((event) => {
-            svScale.value *= event.scaleChange
-            // console.log(svScale.value)
-        })
-        .onEnd(() => {
-            if (svScale.value > 2) {
-                svScale.value = withTiming(2)
-            }
-            else if (svScale.value < 0.33) {
-                svScale.value = withTiming(0.33)
-            }
-        })
-
-
-    const containerStyle = useAnimatedStyle(() => {
-        return {
-            borderColor: 'black',
-            borderWidth: 1,
-            position: "absolute",
-            bottom: -(TABLE_HEIGHT * (1 - svScale.value)) / 2,
-            left: -TABLE_WIDTH / 3,
-            transform: [
-                {
-                    scale: svScale.value,
-                }
-            ]
-        };
-    });
 
     if (fakeUserData.name === "") {
         return (
@@ -94,16 +50,6 @@ export default function App() {
     }
 
     return (
-        <GestureHandlerRootView  >
-            <Header />
-            {/* <Magnify scale={svScale} reset_zoom={() => {
-                svScale.value = withTiming(1)
-            }} /> */}
-            <GestureDetector gesture={pinch}>
-                <Animated.View style={containerStyle} >
-                    <Table />
-                </Animated.View >
-            </GestureDetector>
-        </GestureHandlerRootView>
+        < Table />
     )
 }

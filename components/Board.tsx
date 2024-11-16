@@ -22,7 +22,7 @@ type BoardProps = {
     enemy?: boolean;
     player_name: string;
     // cards: CardProps[]
-    sendToWS: (data: { data_type: string, match?: string, player: string, card?: CardProps, increment?: boolean, faith_points?: number }) => void
+    sendToWS: (data: {}) => void
 }
 
 export default function Board(props: BoardProps) {
@@ -125,12 +125,11 @@ export default function Board(props: BoardProps) {
         })
         .runOnJS(true);
 
-    function sendMoveToServer(data: { data_type: string, card?: CardProps }) {
+    function sendMoveToServer(data: {}) {
         props.sendToWS({
-            data_type: data.data_type,
+            ...data,
             match: fakeUserData.match,
             player: fakeUserData.name,
-            card: data.card
         })
     }
     function getCardFromServer(card: CardProps) {
@@ -151,13 +150,6 @@ export default function Board(props: BoardProps) {
         })
     }
     function toggleWisdom(increment: boolean) {
-        if (increment) {
-            console.log("Esconder")
-            console.log("+1 disponível")
-        } else {
-            console.log("Mostrar")
-            console.log("-1 disponível")
-        }
         props.sendToWS({
             data_type: 'toggle_wisdom',
             match: fakeUserData.match,
@@ -168,24 +160,28 @@ export default function Board(props: BoardProps) {
 
     return (
         <View>
-            <View style={{ position: 'absolute', bottom: 350, left: 480, padding: 8, alignItems: 'center', gap: 8, zIndex: 999 }}>
-                {showFaithControls && <View style={{ position: 'absolute', top: -40, opacity: faithPointsControl < 0 ? 0.4 : 1 }}>
-                    <FontAwesome5 name="plus-circle" size={36} color="#0f0" />
-                </View>}
-                {showFaithControls && <View style={{ position: 'absolute', right: 80 }}>
-                    <ThemedText type='subtitle'>{faithPointsControl}</ThemedText>
-                </View>}
+            {/* Change Faith Points */}
+            <View style={{ position: 'absolute', bottom: 310, left: 480, padding: 8, alignItems: 'center', gap: 8, zIndex: 999 }}>
+                {showFaithControls && <>
+                    <View style={{ position: 'absolute', top: -40, opacity: faithPointsControl < 0 ? 0.4 : 1 }}>
+                        <FontAwesome5 name="plus-circle" size={36} color="#0f0" />
+                    </View>
+                    <View style={{ position: 'absolute', right: 80 }}>
+                        <ThemedText type='subtitle'>{faithPointsControl}</ThemedText>
+                    </View>
+                    <View style={{ position: 'absolute', bottom: -40, opacity: faithPointsControl > 0 ? 0.4 : 1 }}>
+                        <FontAwesome5 name="minus-circle" size={36} color="#f00" />
+                    </View>
+                </>
+                }
                 <GestureDetector gesture={changeFaithGesture}>
-                    <ThemedView >
-                        <ThemedText>
+                    <ThemedView style={{ padding: 2 }} >
+                        <ThemedText style={{ fontSize: 24 }}>
                             <MaterialCommunityIcons name="shield-cross" size={24} />
                             {player_data?.faith_points}
                         </ThemedText>
                     </ThemedView>
                 </GestureDetector>
-                {showFaithControls && <View style={{ position: 'absolute', bottom: -40, opacity: faithPointsControl > 0 ? 0.4 : 1 }}>
-                    <FontAwesome5 name="minus-circle" size={36} color="#f00" />
-                </View>}
             </View>
             {/* MÃO */}
             <View style={{
