@@ -4,8 +4,7 @@ import { useSelector } from 'react-redux';
 import { RootReducer } from '@/store';
 import { game } from '@/utils/game';
 
-const URL = 'marcosvianadev2.ddns.net:3112'
-// const URL = '192.168.1.32:3112'
+const URL =  process.env.EXPO_PUBLIC_API_URL;
 
 export default function useAppWebSocket() {
     const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
