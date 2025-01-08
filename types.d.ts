@@ -1,6 +1,6 @@
 
 declare type PlayersInMatchApiProps = {
-    'player_id': string,
+    'player_id': number,
     'faith_points': number,
     'total_wisdom_points': number,
     'available_wisdom_points': number,
@@ -9,12 +9,13 @@ declare type PlayersInMatchApiProps = {
 }
 
 declare type CardProps = {
+    description?: string,
     // Dados vem da API e NÃO mudam durante o jogo
     slug: string,
     in_game_id: string,
     card_family: string,
     card_type: string,
-    
+
     // Dados vem da API e PODEM mudar durante o jogo
     // deck : ninguém sabe qual é a carta;
     // hand : somente o dono sabe qual é a carta;
@@ -30,10 +31,9 @@ declare type CardProps = {
     bottom_left_value: number,
     bottom_right_value: number,
     attached_cards: CardProps[],
-
-    path?: ImageSourcePropType,
-    is_hidden?: boolean,
-    description?: string,
+    visible?: boolean,
+    orientation: number,
+    tags: string[],
 }
 
 declare type CardMatchReducerProps = {
@@ -41,19 +41,72 @@ declare type CardMatchReducerProps = {
 }
 
 declare type WebSocketData = {
-    data_type: string //'accepted' | 'start' | 'card_move' | 'give_card' | 'back_to_deck' | 'give_wisdom' | 'toggle_wisdom' | 'take_wisdom' | 'change_faith_points';
-    room_stats?: {
-        'id': string,
-        'players': string[],
-        'players_ready': string[],
-        'players_stats': PlayersInMatchApiProps[]
-    }
-    player?: string,
-    increment?: boolean,
-    faith_points?: number,
-    card?: CardProps,
-    cards?: {
-        [key: string]: CardProps[]
-    }
+    data_type: string //'accepted' | 'start' | 'card_move' | 'give_card' | 'back_to_deck'  | 'change_faith_points';
+    data_command: string,
+    data: {
+        match_id?: string,
+        card_family?: string,
+        player_stats?: PlayersInMatchApiProps,
+        card?: CardProps,
+        faith_points?: number,
+    },
+    player_id?: number
 }
 
+declare type UserProps = {
+    id: number,
+    last_login: string,
+    username: string,
+    email: string,
+    first_name: string,
+    avatar: string,
+}
+
+declare type RoomAPI =
+    {
+        id: string,
+        game_id: string,
+        has_password: boolean,
+        players: number[],
+        players_ready: number[],
+    }
+
+declare type MatchAPI =
+    {
+        id: string,
+        players: number[],
+        players_stats: PlayersInMatchApiProps[],
+    }
+
+declare type GameListAPI = {
+    [key: number]: string,
+}
+
+declare type GameDetailsAPI = {
+    title: string,
+    description: string,
+    image: string,
+    gameBoard: [
+        {
+            'name': string,
+            'image': string,
+        }
+    ],
+    deckType: [
+        {
+            id: number,
+            title: string,
+            image: string,
+            deck_position_X: number,
+            deck_position_Y: number,
+            cards: {
+                'bottom_left_value': number,
+                'bottom_right_value': number,
+                'card_slug': string,
+                'card_image': string,
+                'card_image_mini': string,
+                'card_description': string
+            }[]
+        },
+    ]
+}

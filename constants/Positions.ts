@@ -4,7 +4,7 @@ export const BOARD_POSITIONS = {
     MAO: {
         bottom: 0,
         left: 0,
-        width: BOARD_WIDTH - (CARD_WIDTH * 1.5) - CARD_PADDING_X,
+        width: BOARD_WIDTH,
         height: 100,
     },
     DK: {

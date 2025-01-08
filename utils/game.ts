@@ -1,23 +1,76 @@
-class GameMatch {
-    id: string = ''
-    players: string[] = []
-    players_ready: string[] = []
+class Game {
+    connection_status = 4;
+    game_id = 0;
+    room_list: RoomAPI[] = []
+    match_id: string = ''
+    players: number[] = []
+    players_ready: number[] = []
     players_stats: PlayersInMatchApiProps[] = []
 
+    handleWS(incoming: WebSocketData) {
+        switch (incoming.data_type) {
+            case 'room_data':
+                console.log("room_data");
+                if (incoming.data_command === 'room_stats') {
+                    const data = incoming.data as RoomAPI;
+                    this.match_id = data.id
+                    this.players = data.players
+                    this.players_ready = data.players_ready
+                } else if (incoming.data_command === 'leave_room') {
+                    this.leave_room()
+                } else if (incoming.data_command === 'room_list') {
+                    console.log("room_list", incoming.data)
+                    this.room_list = incoming.data as RoomAPI[];
+                }
+                console.log(this)
+                break;
+            case 'match_data':
+                if (incoming.data_command === 'match_start') {
+                    console.log('Iniciando a Partida')
+                    const match_data = incoming.data as MatchAPI
+                    this.match_id = match_data.id
+                    this.players = match_data.players
+                    this.players_stats = match_data.players_stats
+                    // Limpar
+                    this.room_list = []
+                    this.players_ready = []
+                } else if (incoming.data_command === 'update_player') {
+                    const player_data = this.getPlayerData(incoming.player_id!)
+                    player_data!.cards_in_game = incoming.data.player_stats!.cards_in_game
+                    player_data!.cards_deck = incoming.data.player_stats!.cards_deck
+                    player_data!.faith_points = incoming.data.player_stats!.faith_points
+                } else if (incoming.data_command === 'leave_match') {
+                    this.leave_room()
+                }
+            default:
+                break;
+        }
+        // console.log('game: ', game)
+    }
+
     reset() {
-        this.id = ''
+        this.connection_status = 4
+        this.game_id = 0
+        this.room_list = []
+        this.match_id = ''
         this.players = []
         this.players_ready = []
         this.players_stats = []
     }
 
-    getPlayerData(player_id: string): PlayersInMatchApiProps | undefined {
+    leave_room() {
+        this.match_id = ''
+        this.players = []
+        this.players_ready = []
+    }
+
+    getPlayerData(player_id: number): PlayersInMatchApiProps | undefined {
         const player_data = this.players_stats.find(_player => _player.player_id === player_id)
         return player_data
     }
     setCardsOrder(card: CardProps) {
         const player_card_id = card.in_game_id.split('_')[0]
-        const player_data = game.getPlayerData(player_card_id)
+        const player_data = game.getPlayerData(Number(player_card_id))
         const card_game = player_data?.cards_in_game
         const __temp_array = card_game?.filter(_card => {
             if (card.in_game_id !== _card.in_game_id) {
@@ -26,53 +79,55 @@ class GameMatch {
         })
         player_data!.cards_in_game = [...__temp_array!, card]
     }
-    removeCardFromDeck(card: CardProps) {
-        const player_card_id = card.in_game_id.split('_')[0]
-        const player_data = game.getPlayerData(player_card_id)
-        const card_game = player_data?.cards_deck
-        const __temp_array = card_game?.filter(_card => {
-            if (card.in_game_id !== _card.in_game_id) {
-                return card
-            }
-        })
-        player_data!.cards_deck = __temp_array!
-    }
-    returnCardToDeck(card: CardProps) {
-        const player_card_id = card.in_game_id.split('_')[0]
-        const player_data = game.getPlayerData(player_card_id)
-        const card_game = player_data?.cards_in_game
-        const __temp_array = card_game?.filter(_card => {
-            if (card.in_game_id !== _card.in_game_id) {
-                return card
-            }
-        })
-        player_data!.cards_in_game = __temp_array!
-    }
-    giveWisdom(player_id: string) {
-        const player_data = game.getPlayerData(player_id)
-        player_data!.total_wisdom_points += 1
-        player_data!.available_wisdom_points += 1
-    }
-    takeWisdom(player_id: string) {
-        const player_data = game.getPlayerData(player_id)
-        if (player_data!.total_wisdom_points > 0) {
-            player_data!.total_wisdom_points -= 1
-            player_data!.available_wisdom_points -= 1
-        }
-    }
-    toggleWisdom(player_id: string, increment: boolean) {
-        const player_data = game.getPlayerData(player_id)
-        if (increment) {
-            player_data!.available_wisdom_points += 1
-        } else {
-            player_data!.available_wisdom_points -= 1
-        }
-    }
-    changeFaithPoints(player_id: string, faith_points: number) {
-        console.log('changeFaithPoints', faith_points)
-        const player_data = game.getPlayerData(player_id)
-        player_data!.faith_points = faith_points
+    // removeCardFromDeck(card: CardProps) {
+    //     const player_card_id = card.in_game_id.split('_')[0]
+    //     const player_data = game.getPlayerData(Number(player_card_id))
+    //     const card_game = player_data?.cards_deck
+    //     const __temp_array = card_game?.filter(_card => {
+    //         if (card.in_game_id !== _card.in_game_id) {
+    //             return card
+    //         } else {
+    //             player_data!.cards_in_game = [...player_data!.cards_in_game, card]
+    //         }
+    //     })
+    //     player_data!.cards_deck = __temp_array!
+    // }
+    // returnCardToDeck(card: CardProps) {
+    //     const player_card_id = card.in_game_id.split('_')[0]
+    //     const player_data = game.getPlayerData(Number(player_card_id))
+    //     const card_game = player_data?.cards_in_game
+    //     const __temp_array = card_game?.filter(_card => {
+    //         if (card.in_game_id !== _card.in_game_id) {
+    //             return card
+    //         }
+    //     })
+    //     player_data!.cards_in_game = __temp_array!
+    // }
+    // giveWisdom(player_id: number) {
+    //     const player_data = game.getPlayerData(player_id)
+    //     player_data!.total_wisdom_points += 1
+    //     player_data!.available_wisdom_points += 1
+    // }
+    // takeWisdom(player_id: number) {
+    //     const player_data = game.getPlayerData(player_id)
+    //     if (player_data!.total_wisdom_points > 0) {
+    //         player_data!.total_wisdom_points -= 1
+    //         player_data!.available_wisdom_points -= 1
+    //     }
+    // }
+    // toggleWisdom(player_id: number, increment: boolean) {
+    //     const player_data = game.getPlayerData(player_id)
+    //     if (increment) {
+    //         player_data!.available_wisdom_points += 1
+    //     } else {
+    //         player_data!.available_wisdom_points -= 1
+    //     }
+    // }
+    // changeFaithPoints(player_id: number, faith_points: number) {
+    //     console.log('changeFaithPoints', faith_points)
+    //     const player_data = game.getPlayerData(player_id)
+    //     player_data!.faith_points = faith_points
 
-    }
+    // }
 }
-export const game = new GameMatch()
+export const game = new Game()

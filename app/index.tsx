@@ -1,55 +1,45 @@
-import { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
-
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+
 import { RootReducer } from "@/store";
+import { useGetAuthUserDataMutation } from '@/store/api'
+import { login } from "@/store/reducers/dataAuthReducer";
+import { getData } from '@/store/database';
 
-import { login, logout } from "@/store/reducers/fakeAuthReducer";
-
-import Table from "@/components/Table";
+import Home from "@/pages/home";
+import Game from "@/pages/game";
+// import Table from "@/components/Table";
 
 export default function App() {
     const dispatch = useDispatch();
-    const fakeUserData = useSelector((state: RootReducer) => state.fakeAuthReducer.data)
+    const appData = useSelector((state: RootReducer) => state.appReducer.data)
+    const [getUser, { data: userDataAPI, error: userError }] = useGetAuthUserDataMutation();
 
-    const [name, setName] = useState("")
-    const [sala, setSala] = useState("")
 
-    if (fakeUserData.name === "") {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ width: 250, backgroundColor: 'grey', padding: 16, borderRadius: 8 }}>
-                    <Text>Nome</Text>
-                    <TextInput style={{ paddingStart: 8, borderWidth: 1 }} value={name} onChangeText={setName} />
-                    <Text style={{ marginTop: 16 }}>Sala</Text>
-                    <TextInput style={{ paddingStart: 8, borderWidth: 1 }} value={sala} onChangeText={setSala} />
-                    <Pressable
-                        onPress={() => {
-                            if (name !== '' && sala !== '') {
-                                if (name === "clear" && sala === "all") {
-                                    setName("")
-                                    setSala("")
-                                    setTimeout(() => { dispatch(logout()) }, 100)
-                                }
-                                dispatch(login({
-                                    data: {
-                                        name: name.toLowerCase(),
-                                        match: sala.toLowerCase()
-                                    }
-                                }))
-                            }
+    useEffect(() => {
+        getData('userDataAuth').then(_data => {
+            if (_data) {
+                getUser(_data)
+            }
+        })
+    }, [])
 
-                        }}>
-                        <View style={{ backgroundColor: '#44f', height: 32, width: '100%', justifyContent: 'center', alignItems: 'center', borderRadius: 8, marginTop: 16 }}>
-                            <Text style={{ fontWeight: 700 }}>Salvar</Text>
-                        </View>
-                    </Pressable>
-                </View>
-            </View>
-        )
+    useEffect(() => {
+        if (userDataAPI) {
+            dispatch(login({
+                data: userDataAPI
+            }))
+        }
+    }, [userDataAPI])
+    switch (appData.page) {
+        case 'game':
+            return (
+                <Game />
+            )
+
+        default:
+            return (
+                <Home />
+            )
     }
-
-    return (
-        < Table />
-    )
 }

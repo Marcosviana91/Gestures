@@ -1,0 +1,265 @@
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
+
+import useAppWebSocket from '@/hooks/useAppWebSocket'
+import { RootReducer } from "@/store";
+import { setPage } from "@/store/reducers/appReducer";
+
+import { ConnectionStatus } from "@/components/connectionSpot";
+import { ThemedModal } from "@/components/themed/ThemedModal";
+import { game } from '@/utils/game';
+import { ThemedText } from "@/components/themed/ThemedText";
+import Room from "@/components/game/Room";
+
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
+import Table from "@/components/game/Table";
+import Header from "@/components/game/Header";
+import { ThemedView } from "@/components/themed/ThemedView";
+
+
+export default function Game() {
+    const dispatch = useDispatch();
+    const appData = useSelector((state: RootReducer) => state.appReducer.data)
+    const [creatingRoom, setCreatingRoom] = useState(false)
+    const [requestRoomPassword, setRequestRoomPassword] = useState(false)
+    const [roomPassword, setRoomPassword] = useState('')
+
+    const WS = useAppWebSocket()
+
+    function sendDataToWS(data: {}) {
+        data = {
+            ...data,
+            'game_id': game.game_id,
+        }
+        WS.sendJsonMessage(data)
+    }
+
+    if (game.game_id === 0) {
+        dispatch(setPage('home'))
+    }
+
+    useEffect(() => {
+        // const refresh = setInterval(() => {
+        //     sendDataToWS({
+        //         'data_type': 'game_server',
+        //         'data_command': 'get_rooms',
+        //     })
+        // }, 1500);
+
+        // return () => { clearInterval(refresh) }
+    }, [])
+
+    if (game.players_stats.length > 0) {
+        return (
+            <>
+
+                <View style={{ zIndex: 999, backgroundColor: 'white' }}>
+                    <Header sendWS={sendDataToWS} />
+                </View>
+                <ConnectionStatus wsState={game.connection_status} />
+                <Table sendWS={sendDataToWS} />
+            </>
+        )
+    }
+
+    return (
+        <ThemedView
+            style={{ padding: 8, flex: 1 }}
+        >
+            <ConnectionStatus wsState={game.connection_status} />
+            <ThemedModal
+                visible={creatingRoom}
+                transparent
+                title={`${game.game_id}: ${appData.selected_game_details?.title}`}
+                closeModal={() => {
+                    setCreatingRoom(false)
+                }}
+                onRequestClose={() => {
+                    setCreatingRoom(false)
+                }}
+            >
+                <ThemedView
+                    style={{ flex: 1, width: "100%" }}
+                >
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <ThemedText>Senha:</ThemedText>
+                        <TextInput
+                            style={{
+                                flex: 1,
+                                borderColor: '#555',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                paddingVertical: 2,
+                                paddingHorizontal: 8,
+                                color: '#555',
+                            }}
+                            value={roomPassword}
+                            onChangeText={setRoomPassword}
+                            placeholder="Deixe vazio para não usar senha"
+                            placeholderTextColor='#555'
+                        />
+                    </View>
+                    <Pressable
+                        style={{ position: 'absolute', bottom: 0, width: '100%' }}
+                        onPress={() => {
+                            sendDataToWS({
+                                'data_type': 'game_server',
+                                'data_command': 'create_room',
+                                'data': {
+                                    'password': roomPassword,
+                                }
+                            })
+                            setRoomPassword('')
+                            setCreatingRoom(false)
+                        }}
+                    >
+                        <View
+                            style={{
+                                borderColor: 'white',
+                                borderWidth: 1,
+                                borderRadius: 8,
+                                paddingVertical: 4
+                            }}
+                        >
+                            <ThemedText style={{ textAlign: 'center' }}>Criar</ThemedText>
+                        </View>
+                    </Pressable>
+                </ThemedView>
+            </ThemedModal>
+            <Pressable
+                onPress={() => {
+                    dispatch(setPage('home'))
+                }}
+            >
+                <View style={{
+                    padding: 12,
+                    borderColor: '#555',
+                    borderWidth: 1,
+                }}>
+                    <ThemedText>Ir para o Início</ThemedText>
+                </View>
+            </Pressable>
+            <ThemedText>{appData.selected_game_details?.title}</ThemedText>
+            <Pressable
+                onPress={() => {
+                    setCreatingRoom(true)
+                }}
+            >
+                <View
+                    style={{
+                        padding: 12,
+                        borderColor: '#555',
+                        borderWidth: 1
+                    }}
+                >
+                    <ThemedText>Criar Sala
+                        <FontAwesome name="group" size={18} />
+                    </ThemedText>
+                </View>
+            </Pressable>
+            {/* Room list */}
+            <View>
+                <ThemedText style={{ textAlign: 'center' }}>Salas</ThemedText>
+                <Pressable
+                    style={{ margin: 16, borderColor: '#555', borderRadius: 4, borderWidth: 1 }}
+                    onPress={() => {
+                        sendDataToWS({
+                            'data_type': 'game_server',
+                            'data_command': 'get_rooms',
+                        })
+                    }}
+                >
+                    <ThemedText style={{textAlign:'center'}}>Refresh</ThemedText>
+                </Pressable>
+                {game.room_list &&
+                    <View
+                        style={{
+                            gap: 8
+                        }}
+                    >
+                        {game.room_list.map(room => (
+                            <View key={room.id}>
+                                <Pressable
+                                    onPress={() => {
+                                        if (!room.has_password) {
+                                            sendDataToWS({
+                                                'data_type': 'game_server',
+                                                'data_command': 'enter_room',
+                                                'data': {
+                                                    'room_id': room.id,
+                                                    'password': roomPassword
+                                                },
+                                            })
+                                        } else {
+                                            setRequestRoomPassword(true)
+                                        }
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            padding: 12,
+                                            borderColor: '#555',
+                                            borderWidth: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                        }}
+                                    >
+                                        <ThemedText>{room.id}</ThemedText>
+                                        <ThemedText>{room.players.length}/5</ThemedText>
+                                        <ThemedText>{room.has_password
+                                            ? <FontAwesome name="lock" size={24} />
+                                            : <FontAwesome name="unlock" size={24} />
+                                        }</ThemedText>
+                                    </View>
+                                </Pressable>
+                                <ThemedModal
+                                    visible={requestRoomPassword}
+                                    closeModal={() => { setRequestRoomPassword(false) }}
+                                    title="Esta sala requer uma senha"
+                                >
+                                    <View style={{ flexDirection: 'row', gap: 8, alignContent: 'center' }}>
+                                        <ThemedText>Senha:</ThemedText>
+                                        <TextInput
+                                            style={{
+                                                flex: 1,
+                                                borderColor: '#555',
+                                                borderWidth: 1,
+                                                borderRadius: 4,
+                                                paddingVertical: 2,
+                                                paddingHorizontal: 8,
+                                                color: '#555',
+                                            }}
+                                            value={roomPassword}
+                                            onChangeText={setRoomPassword}
+                                        />
+                                    </View>
+                                    <Pressable
+                                        style={{ borderColor: '#48ff00', borderWidth: 1, padding: 8, borderRadius: 8 }}
+                                        onPress={() => {
+                                            sendDataToWS({
+                                                'data_type': 'game_server',
+                                                'data_command': 'enter_room',
+                                                'data': {
+                                                    'room_id': room.id,
+                                                    'password': roomPassword
+                                                },
+                                            })
+                                        }}
+                                    >
+                                        <ThemedText>ENTRAR</ThemedText>
+                                    </Pressable>
+                                </ThemedModal>
+                            </View>
+
+                        ))}
+                    </View>
+                }
+            </View>
+            {game.match_id !== '' &&
+                <Room sendWS={sendDataToWS} />
+            }
+        </ThemedView>
+    )
+}
