@@ -8,15 +8,16 @@ import { useGetUserDataQuery } from '@/store/api'
 
 import { BOARD_POSITIONS } from '@/constants/Positions';
 
-import Card, { DeckCard, MiniCard } from '@/components/game/Card';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
-import { game } from '@/utils/game';
+import Card, { DeckCard, MiniCard } from '@/components/game/Card';
+import PlayerAvatar64 from "@/components/PlayerAvatar64";
 import { ThemedModal } from '@/components/themed/ThemedModal';
 import { ThemedText } from '@/components/themed/ThemedText';
 import { ThemedView } from '@/components/themed/ThemedView';
-import PlayerAvatar64 from "@/components/PlayerAvatar64";
+
+import { game } from '@/utils/game';
 import { getMediaBase64 } from '@/utils/FileSystem/Media';
 
 type BoardProps = {
@@ -33,9 +34,10 @@ export default function Board(props: BoardProps) {
     const [faithPointsControl, setFaithPointsControl] = useState(0);
     const { data: playerData } = useGetUserDataQuery(props.player_id)
 
+    const [openedMenuId, setOpenedMenuId] = useState('');
+
     // Image
     const [base64_board_string, setBase64_board_string] = useState('')
-
     
     // Set Playmat Image
     useEffect(() => {
@@ -57,8 +59,6 @@ export default function Board(props: BoardProps) {
             resizeMode: "stretch",
         }
     })
-
-
 
 
     const changeLifeGesture = Gesture.Pan()
@@ -166,6 +166,8 @@ export default function Board(props: BoardProps) {
                             deck_index={index}
                             setShowAllCards={setShowAllCardsInDeck}
                             sendToWS={props.sendToWS}
+                            menuId={openedMenuId}
+                            setMenuId={setOpenedMenuId}
                         />
                     )
                 })}
@@ -191,6 +193,8 @@ export default function Board(props: BoardProps) {
                             key={card.in_game_id}
                             card_id={card.in_game_id}
                             sendToWS={props.sendToWS}
+                            menuId={openedMenuId}
+                            setMenuId={setOpenedMenuId}
                         />
                     )
                 })}
