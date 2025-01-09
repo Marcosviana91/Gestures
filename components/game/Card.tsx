@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, ScrollView, Platform, TextInput } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, Platform, TextInput, useColorScheme, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
@@ -7,7 +7,7 @@ import { useSelector } from 'react-redux';
 import { RootReducer } from '@/store';
 
 import { BOARD_POSITIONS } from '@/constants/Positions';
-import { BOARD_WIDTH, CARD_HEIGHT, CARD_PADDING_X, CARD_WIDTH } from '@/constants/Sizes';
+import { CARD_HEIGHT, CARD_WIDTH } from '@/constants/Sizes';
 
 import { game } from '@/utils/game';
 import { ThemedModal } from '../themed/ThemedModal';
@@ -16,13 +16,16 @@ import { ThemedText } from '../themed/ThemedText';
 
 import { getMediaBase64 } from '@/utils/FileSystem/Media';
 import { FontAwesome6, Ionicons, AntDesign } from '@expo/vector-icons';
+import DeckLoader from './DeckLoader';
 
 type Props = {
     card_id: string,
-    sendToWS: (data: WebSocketData) => void
+    sendToWS: (data: WebSocketData) => void,
+    menuId: string,
+    setMenuId: (menu_id: string) => void,
 }
 
-export default function Card({ card_id, sendToWS }: Props) {
+export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
     // console.log('Renderizou  card')
     const userData = useSelector((state: RootReducer) => state.dataAuthReducer.data)
     const deckType = useSelector((state: RootReducer) => state.appReducer.data).selected_game_details?.deckType!;
@@ -33,6 +36,7 @@ export default function Card({ card_id, sendToWS }: Props) {
     const [image64, setImage64] = useState('')
     const [verso_image64, setVerso_image64] = useState('')
     const [showCardMenu, setShowCardMenu] = useState(false)
+    const theme = useColorScheme() // light | dark
 
     // console.log("card", card)
     const card_is_mine = String(userData.id) === card?.in_game_id.split('_')[0]
@@ -63,6 +67,16 @@ export default function Card({ card_id, sendToWS }: Props) {
 
     const [bigger, setBigger] = useState(false)
 
+    const styles = StyleSheet.create({
+        cardTags: {
+            position: "absolute",
+            width: 4,
+            height: 15,
+            borderRadius: 2,
+            zIndex: -1
+        }
+    })
+
     // Movimenta a carta automaticamente
     useEffect(() => {
         if (card?.position) {
@@ -70,6 +84,22 @@ export default function Card({ card_id, sendToWS }: Props) {
             cardBottom.value = withTiming(_card.position.bottom)
         }
     }, [card])
+
+    // Fecha o menu
+    useEffect(() => {
+        if (menuId !== _card.in_game_id) {
+            setShowCardMenu(false)
+        }
+    }, [menuId])
+
+    // Faz a carta aparecer por cima da outra ao abrir o menu
+    useEffect(() => {
+        if (showCardMenu) {
+            zIndex.value = 1
+        } else {
+            zIndex.value = 0
+        }
+    }, [showCardMenu])
 
     // Set Card Image
     useEffect(() => {
@@ -113,7 +143,7 @@ export default function Card({ card_id, sendToWS }: Props) {
         checkXposition()
         checkCollision(cardLeft.value, cardBottom.value, true)
         console.log("updateCardProps", _card)
-        game.setCardsOrder({ ..._card })
+        // game.setCardsOrder({ ..._card })
         if (_card.where_i_am === 'playmat' || _card.where_i_am === 'hand') {
             sendToWS({
                 data_type: 'match_data',
@@ -172,6 +202,7 @@ export default function Card({ card_id, sendToWS }: Props) {
 
     function checkCollision(left: number, bottom: number, endMove: boolean) {
         // Checar colisão com o deck
+        // TODO pegar a posição dos decks pelo REDUX
         if (
             (left > BOARD_POSITIONS.DK.left - (CARD_WIDTH / 2)) &&
             (left < BOARD_POSITIONS.DK.left + (CARD_WIDTH / 2)) &&
@@ -190,6 +221,7 @@ export default function Card({ card_id, sendToWS }: Props) {
         else {
             setIsCollided(false)
         }
+        // Checar colisão com as outras cartas do playmat
         if (_card.where_i_am === 'playmat' && card?.visible) {
             card_game.forEach(card_to_check => {
                 if (card_to_check.where_i_am === 'playmat' && card_to_check.in_game_id != _card.in_game_id && card_to_check?.visible) {
@@ -233,10 +265,10 @@ export default function Card({ card_id, sendToWS }: Props) {
         .runOnJS(true)
 
     const drag = Gesture.Pan()
-        .minDistance(5)
+        .minDistance(3)
         .onStart(() => {
             if (card_is_mine) {
-                zIndex.value = 999
+                zIndex.value = 1
                 setShowCardMenu(false)
             }
         })
@@ -259,6 +291,7 @@ export default function Card({ card_id, sendToWS }: Props) {
         .onStart(() => {
             if (card_is_mine) {
                 console.log("SHOW CARD MENU")
+                setMenuId(_card.in_game_id)
                 setShowCardMenu(!showCardMenu)
             }
         }).runOnJS(true)
@@ -825,102 +858,54 @@ export default function Card({ card_id, sendToWS }: Props) {
                             <>
                                 {/* Esquerdos */}
                                 {/* 0 */}
-                                {_card.tags[0] !== '' && <View style={{
-                                    backgroundColor: '#555',
-                                    position: "absolute",
+                                {_card.tags[0] !== '' && <View style={[styles.cardTags,{
+                                    backgroundColor: '#fff',
                                     top: 0,
-                                    left: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopStartRadius: 4,
-                                    borderBottomStartRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    left: -4,
+                                }]} />}
                                 {/* 1 */}
-                                {_card.tags[1] !== '' && <View style={{
+                                {_card.tags[1] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#f0f',
-                                    position: "absolute",
                                     top: 15,
-                                    left: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopStartRadius: 4,
-                                    borderBottomStartRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    left: -4,
+                                }]} />}
                                 {/* 2 */}
-                                {_card.tags[2] !== '' && <View style={{
+                                {_card.tags[2] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#000',
-                                    position: "absolute",
                                     top: 30,
-                                    left: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopStartRadius: 4,
-                                    borderBottomStartRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    left: -4,
+                                }]} />}
                                 {/* 3 */}
-                                {_card.tags[3] !== '' && <View style={{
+                                {_card.tags[3] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#00f',
-                                    position: "absolute",
                                     top: 45,
-                                    left: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopStartRadius: 4,
-                                    borderBottomStartRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    left: -4,
+                                }]} />}
                                 {/* Direitos */}
                                 {/* 4 */}
-                                {_card.tags[4] !== '' && <View style={{
+                                {_card.tags[4] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#f00',
-                                    position: "absolute",
                                     top: 0,
-                                    right: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopEndRadius: 4,
-                                    borderBottomEndRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    right: -4,
+                                }]} />}
                                 {/* 5 */}
-                                {_card.tags[5] !== '' && <View style={{
+                                {_card.tags[5] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#0f0',
-                                    position: "absolute",
                                     top: 15,
-                                    right: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopEndRadius: 4,
-                                    borderBottomEndRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    right: -4,
+                                }]} />}
                                 {/* 6 */}
-                                {_card.tags[6] !== '' && <View style={{
+                                {_card.tags[6] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#0ff',
-                                    position: "absolute",
                                     top: 30,
-                                    right: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopEndRadius: 4,
-                                    borderBottomEndRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    right: -4,
+                                }]} />}
                                 {/* 7 */}
-                                {_card.tags[7] !== '' && <View style={{
+                                {_card.tags[7] !== '' && <View style={[styles.cardTags,{
                                     backgroundColor: '#ff0',
-                                    position: "absolute",
                                     top: 45,
-                                    right: -3,
-                                    width: 4,
-                                    height: 15,
-                                    borderTopEndRadius: 4,
-                                    borderBottomEndRadius: 4,
-                                    zIndex: -1
-                                }} />}
+                                    right: -4,
+                                }]} />}
                             </>
                         }
                         {!is_hidden &&
@@ -1035,6 +1020,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                             </Pressable>
                         </View>
                     }
+                    {/* Tags Form */}
                     <ThemedModal
                         visible={showPinsModal}
                         closeModal={() => { setShowPinsModal(false) }}
@@ -1042,12 +1028,17 @@ export default function Card({ card_id, sendToWS }: Props) {
                         dismissable
                         backgroundTransparent
                     >
-                        <View style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            gap: 12
-                        }}>
+                        <ThemedView
+                            darkColor='#333'
+                            lightColor='#ccc'
+                            style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                width: '100%',
+                                gap: 12,
+                                padding: 12,
+                                borderRadius: 8
+                            }}>
                             {/* Direitos */}
                             <View style={{ flexGrow: 1 }}>
                                 <ThemedText style={{ textAlign: 'center' }}>Cinza</ThemedText>
@@ -1059,9 +1050,10 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         setCardTags(_temp_array)
                                     }}
                                     style={{
-                                        borderBottomColor: '#555',
+                                        borderBottomColor: '#fff',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Lilás</ThemedText>
@@ -1076,6 +1068,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#f0f',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Preto</ThemedText>
@@ -1090,6 +1083,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#000',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Azul</ThemedText>
@@ -1104,6 +1098,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#00f',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                             </View>
@@ -1121,6 +1116,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#f00',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Verde</ThemedText>
@@ -1135,6 +1131,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#0f0',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Ciano</ThemedText>
@@ -1149,6 +1146,7 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#0ff',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                                 <ThemedText style={{ textAlign: 'center' }}>Amarelo</ThemedText>
@@ -1163,10 +1161,11 @@ export default function Card({ card_id, sendToWS }: Props) {
                                         borderBottomColor: '#ff0',
                                         borderBottomWidth: 1,
                                         textAlign: "center",
+                                        color: theme == 'dark' ? "white" : 'black',
                                     }}
                                 />
                             </View>
-                        </View>
+                        </ThemedView>
                         <Pressable
                             style={{
                                 backgroundColor: '#00ff37',
@@ -1198,7 +1197,13 @@ export default function Card({ card_id, sendToWS }: Props) {
 }
 
 // Representação do Deck no tabuleiro
-export function DeckCard({ deck_index, sendToWS, setShowAllCards }: { deck_index: number, sendToWS: (data: WebSocketData) => void, setShowAllCards: (deck_title: string) => void }) {
+export function DeckCard({ deck_index, sendToWS, setShowAllCards, menuId, setMenuId }: {
+    deck_index: number,
+    sendToWS: (data: WebSocketData) => void,
+    setShowAllCards: (deck_title: string) => void,
+    menuId: string,
+    setMenuId: (menu_id: string) => void,
+}) {
     const deck = useSelector((state: RootReducer) => state.appReducer.data).selected_game_details?.deckType[deck_index]!;
     const [showDeckMenu, setShowDeckMenu] = useState(false);
     const [image64, setImage64] = useState('')
@@ -1210,8 +1215,16 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards }: { deck_index
         }
     }, [])
 
+    // Fecha o menu
+    useEffect(() => {
+        if (menuId !== deck.title) {
+            setShowDeckMenu(false)
+        }
+    }, [menuId])
+
     const showDeckMenuGesture = Gesture.LongPress()
         .onStart(() => {
+            setMenuId(deck.title)
             console.log("SHOW DECK MENU:", deck.title)
             setShowDeckMenu(!showDeckMenu)
         }).runOnJS(true);
@@ -1242,7 +1255,7 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards }: { deck_index
                     left: deck.deck_position_X,
                     width: BOARD_POSITIONS.DW.width,
                     height: BOARD_POSITIONS.DW.height,
-                    zIndex: 1,
+                    zIndex: showDeckMenu ? 1 : 0,
                     borderColor: 'black',
                     borderWidth: 1
                 }}>
@@ -1294,6 +1307,24 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards }: { deck_index
                         >
                             <Ionicons name="eye" size={36} color="black" />
                         </Pressable>
+                        {/* Botão para carregar deckBuild */}
+                        {/* Gerado em https://costamateus.com.br/faithbattle/deck */}
+                        <View
+                            style={{
+                                position: 'absolute',
+                                top: '15%', left: '100%',
+                                width: '100%', height: '70%',
+                                alignItems: 'center', justifyContent: 'center',
+                                backgroundColor: '#fff6',
+                                borderWidth: 1, borderColor: 'black', borderRadius: 6,
+                                zIndex: 999999
+                            }}
+                        >
+                            <DeckLoader sendToWS={(data => {
+                                sendToWS(data)
+                                setShowDeckMenu(false)
+                            })} card_family={deck.title.toLowerCase()} />
+                        </View>
                     </View>
                 }
 
