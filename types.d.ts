@@ -49,6 +49,7 @@ declare type WebSocketData = {
         player_stats?: PlayersInMatchApiProps,
         card?: CardProps,
         faith_points?: number,
+        card_list?: string[]
     },
     player_id?: number
 }
@@ -110,3 +111,40 @@ declare type GameDetailsAPI = {
         },
     ]
 }
+// https://costamateus.com.br/faithbattle/deck
+declare type deckBuilderFromMateusCosta = [
+    {
+        id: number,
+        name: string,
+        collection: string,
+        effect: string,
+        quote: string,
+        serial_number: string,
+        category: string,
+        is_exclusive?: number,
+        properties: {
+            id: number,
+            card_id: number,
+            cost: number,
+            atk?: number,
+            def?: number,
+        },
+        images: [
+            {
+                id: number,
+                card_id: number,
+                path: string,
+                exclusive_text?: string,
+                is_exclusive?: number
+            }
+        ],
+        relations: [
+            {
+                card_id: number,
+                related_card_id: number
+            },
+        ],
+        synergies: [],
+        count: number // quantidade de repetições 1 ou 2
+    },
+]
