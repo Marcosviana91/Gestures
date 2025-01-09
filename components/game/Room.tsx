@@ -10,6 +10,7 @@ import { game } from '@/utils/game';
 
 export default function Room({ sendWS }: { sendWS: (dict: {}) => void }) {
     const userData = useSelector((state: RootReducer) => state.dataAuthReducer.data)
+    const im_ready = game.players_ready && !!game.players_ready.find(p => p === userData.id)
     return (
         <ThemedModal
             hideCloseButton
@@ -36,7 +37,7 @@ export default function Room({ sendWS }: { sendWS: (dict: {}) => void }) {
                     style={{ flexDirection: 'row', justifyContent: 'space-between' }}
                 >
                     <Pressable
-                        disabled={game.players_ready && !!game.players_ready.find(p => p === userData.id)}
+                        disabled={im_ready}
                         onPress={() => {
                             sendWS({
                                 'data_type': 'game_server',
@@ -47,7 +48,8 @@ export default function Room({ sendWS }: { sendWS: (dict: {}) => void }) {
                         <ThemedView style={{
                             width: 120, height: 40,
                             justifyContent: "center", alignItems: "center",
-                            borderRadius: 8, borderWidth: 1
+                            borderRadius: 8, borderWidth: 1,
+                            opacity: im_ready ? .6 : 1,
                         }}>
                             <ThemedText>Pronto!</ThemedText>
                         </ThemedView>
