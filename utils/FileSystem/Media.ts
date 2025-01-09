@@ -3,8 +3,6 @@ import * as FileSystem from 'expo-file-system';
 const SITE = process.env.EXPO_PUBLIC_SITE_URL;
 
 const mediaDir = FileSystem.documentDirectory + 'media/';
-const mediaFileUri = (mediaFile: string, mediaFolder: string) => `${mediaDir}/${mediaFolder}/${mediaFile}`;
-const mediaUrl = (mediaFile: string, mediaFolder: string) => `${SITE}/media/${mediaFolder}/${mediaFile}`;
 
 // Checks if media directory exists. If not, creates it
 async function ensureDirExists() {

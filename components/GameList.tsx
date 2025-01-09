@@ -14,7 +14,7 @@ export default function GameList() {
     const [showGameList, setShowGameList] = useState(false)
     const [gameList, setGameList] = useState([])
     const [selectedGame, setSelectedGame] = useState<number>()
-    
+
     useEffect(() => {
         const backAction = () => {
             Alert.alert('Sair do jogo?', 'Você está encerrando o aplicativo. Está certo?', [
@@ -51,6 +51,7 @@ export default function GameList() {
             game.game_id = gameList[selectedGame][0]
         }
     }, [selectedGame])
+
 
     return (
         <View style={{}}>
@@ -104,7 +105,5 @@ export default function GameList() {
                 (<GameDetails game_id={gameList[selectedGame!][0]} />)
             }
         </View>
-
     )
-
 }

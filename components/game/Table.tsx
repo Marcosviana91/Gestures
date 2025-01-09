@@ -4,11 +4,9 @@ import { Image, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import AntDesign from '@expo/vector-icons/AntDesign';
 
 import Board from './Board';
-import { ThemedText } from '../themed/ThemedText';
-import { BOARD_WIDTH, BOARD_HEIGHT, CARD_HEIGHT } from '@/constants/Sizes';
+import { BOARD_WIDTH, BOARD_HEIGHT } from '@/constants/Sizes';
 import { RootReducer } from '@/store';
 import { game } from '@/utils/game';
 import BoardSettings from './Settings';
@@ -16,8 +14,6 @@ import BoardSettings from './Settings';
 export default function Table({ sendWS }: { sendWS: (dict: {}) => void }) {
     // console.log("Renderizou Table")
     const dataAuthReducer = useSelector((state: RootReducer) => state.dataAuthReducer.data)
-    // const dispatch = useDispatch()
-
     function reorderOponentList() {
         const my_position_in_list = game.players.findIndex(str => str === dataAuthReducer.id)
         const __temp_array_start = game.players.slice(0, my_position_in_list)
