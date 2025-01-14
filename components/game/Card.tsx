@@ -1197,14 +1197,17 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
 }
 
 // Representação do Deck no tabuleiro
-export function DeckCard({ deck_index, sendToWS, setShowAllCards, menuId, setMenuId }: {
+export function DeckCard({ deck_index, sendToWS, setShowAllCards, setShowDeckLoader, menuId, setMenuId }: {
     deck_index: number,
     sendToWS: (data: WebSocketData) => void,
     setShowAllCards: (deck_title: string) => void,
+    setShowDeckLoader: (deck_title: string) => void,
     menuId: string,
     setMenuId: (menu_id: string) => void,
 }) {
+    const userData = useSelector((state: RootReducer) => state.dataAuthReducer.data)
     const deck = useSelector((state: RootReducer) => state.appReducer.data).selected_game_details?.deckType[deck_index]!;
+    const player_data = game.getPlayerData(userData.id)
     const [showDeckMenu, setShowDeckMenu] = useState(false);
     const [image64, setImage64] = useState('')
 
@@ -1309,7 +1312,16 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards, menuId, setMen
                         </Pressable>
                         {/* Botão para carregar deckBuild */}
                         {/* Gerado em https://costamateus.com.br/faithbattle/deck */}
-                        <View
+                        <Pressable
+                            onPress={() => {
+                                if (player_data!.cards_in_game.length === 0) {
+                                    console.log("VER CARTAS CARREGADAS", deck.title.toLowerCase())
+                                    setShowDeckMenu(false)
+                                    setShowDeckLoader(deck.title.toLowerCase())
+                                } else {
+                                    ToastAndroid.show('Remova todas as cartas da sua mesa...', ToastAndroid.SHORT)
+                                }
+                            }}
                             style={{
                                 position: 'absolute',
                                 top: '15%', left: '100%',
@@ -1320,11 +1332,8 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards, menuId, setMen
                                 zIndex: 999999
                             }}
                         >
-                            <DeckLoader sendToWS={(data => {
-                                sendToWS(data)
-                                setShowDeckMenu(false)
-                            })} card_family={deck.title.toLowerCase()} />
-                        </View>
+                            <MaterialCommunityIcons name="cards" size={36} />
+                        </Pressable>
                     </View>
                 }
 
@@ -1341,7 +1350,6 @@ export function DeckCard({ deck_index, sendToWS, setShowAllCards, menuId, setMen
                     />
                     : <Text>...</Text>
                 }
-
             </View>
         </GestureDetector>
     );
@@ -1366,6 +1374,7 @@ export function MiniCard({ card, sendToWS }: { card: CardProps, sendToWS: (data:
             getMediaBase64(path).then(file => setImage64(file))
         }
     }, [])
+
     if (!image64) {
         return undefined
     }
