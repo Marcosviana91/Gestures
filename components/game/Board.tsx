@@ -19,6 +19,7 @@ import { ThemedView } from '@/components/themed/ThemedView';
 
 import { game } from '@/utils/game';
 import { getMediaBase64 } from '@/utils/FileSystem/Media';
+import DeckLoader from './DeckLoader';
 
 type BoardProps = {
     enemy?: boolean;
@@ -30,6 +31,7 @@ export default function Board(props: BoardProps) {
     // console.log(`Renderizou ${props.enemy ? 'enemy ' : ''}Board`);
     const appData = useSelector((state: RootReducer) => state.appReducer.data)
     const [showAllCardsInDeck, setShowAllCardsInDeck] = useState('');
+    const [showDeckLoader, setShowDeckLoader] = useState('')
     const [showFaithControls, setShowFaithControls] = useState(false);
     const [faithPointsControl, setFaithPointsControl] = useState(0);
     const { data: playerData } = useGetUserDataQuery(props.player_id)
@@ -38,7 +40,7 @@ export default function Board(props: BoardProps) {
 
     // Image
     const [base64_board_string, setBase64_board_string] = useState('')
-    
+
     // Set Playmat Image
     useEffect(() => {
         if (Platform.OS === 'android' && appData.selected_game_details?.gameBoard) {
@@ -83,7 +85,6 @@ export default function Board(props: BoardProps) {
                             match_id: game.match_id,
                             faith_points: faithPointsControl,
                         }
-
                     })
                 }
             }
@@ -165,6 +166,7 @@ export default function Board(props: BoardProps) {
                             key={index}
                             deck_index={index}
                             setShowAllCards={setShowAllCardsInDeck}
+                            setShowDeckLoader={setShowDeckLoader}
                             sendToWS={props.sendToWS}
                             menuId={openedMenuId}
                             setMenuId={setOpenedMenuId}
@@ -235,6 +237,17 @@ export default function Board(props: BoardProps) {
                         </ScrollView>
                     </View>
                 </ThemedModal>}
+            {/* Cartas carregados */}
+            {showDeckLoader !== '' &&
+                <DeckLoader
+                    card_family={showDeckLoader}
+                    sendToWS={(data) => {
+                        props.sendToWS(data)
+                        setShowDeckLoader('')
+                    }}
+                    setShowDeckLoader={setShowDeckLoader}
+                />
+            }
         </View>
     )
 }

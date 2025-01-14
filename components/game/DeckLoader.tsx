@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Pressable, ScrollView, Linking, ToastAndroid, useColorScheme } from 'react-native';
+import { View, Pressable, ScrollView, Linking, ToastAndroid, useColorScheme, Image, Text } from 'react-native';
 
 import * as DocumentPicker from 'expo-document-picker';
 import { readFile } from "@/utils/FileSystem/Reader";
@@ -11,23 +11,32 @@ import { ThemedText } from '../themed/ThemedText';
 import { ThemedView } from '../themed/ThemedView';
 import { ThemedModal } from '../themed/ThemedModal';
 
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-
 import { game } from '@/utils/game';
+import { getMediaBase64 } from '@/utils/FileSystem/Media';
 
-export default function DeckLoader({ sendToWS, card_family }: { sendToWS: (data: WebSocketData) => void, card_family: string }) {
-    const userData = useSelector((state: RootReducer) => state.dataAuthReducer.data)
-    const [showModal, setShowModal] = useState(false)
+export default function DeckLoader({ sendToWS, card_family, setShowDeckLoader }: {
+    sendToWS: (data: WebSocketData) => void,
+    card_family: string,
+    setShowDeckLoader: (deck_title: string) => void,
+}) {
     const [cardList, setCardList] = useState<string[]>([])
-    const playerData = game.getPlayerData(userData.id)
+    const [selectedCardSlug, setSelectedCardSlug] = useState('')
     const theme = useColorScheme() // light | dark
 
     function prepareCardList() {
         function file_content(file_content: deckBuilderFromMateusCosta) {
             // TODO REMOVER ACENTUAÇÃO
             // THANKS https://pt.stackoverflow.com/questions/237762/remover-acentos-javascript
-            console.log("file_content")
             let _temp_array: string[] = []
+            // Verifica se o arquivo  baixado tem outra estrutura, usada nos Decks da Comunidade
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            if (file_content.cards !== undefined) {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                file_content = file_content.cards
+            }
+            console.log('CARD: #', file_content.length)
             file_content.forEach(card => {
                 if (card.count === 2) {
                     _temp_array.push(card.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll(" ", "-").replaceAll(",", ""));
@@ -35,60 +44,63 @@ export default function DeckLoader({ sendToWS, card_family }: { sendToWS: (data:
                 _temp_array.push(card.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replaceAll(" ", "-").replaceAll(",", ""));
             })
             setCardList(_temp_array)
+
         }
 
         DocumentPicker.getDocumentAsync()
             .then(data => {
-                if (!data.canceled && data.output && data.output.length > 0 && data.output[0].type === 'application/json') {
+                if (data.canceled) {
+                    console.log("CANCELED: getDocumentAsync")
+                    return
+                }
+                console.log("SELECTED: getDocumentAsync:")
+                if (data.output && data.output.length > 0 && data.output[0].type === 'application/json') {
+                    console.log("OUTPUT: ", data.output)
                     data.output[0].text()
                         .then(text => { file_content(JSON.parse(text)) })
-                } else if (!data.canceled && data.assets.length > 0 && data.assets[0].mimeType === 'application/json') {
+                } else if (data.assets.length > 0 && data.assets[0].mimeType === 'application/json') {
+                    console.log("ASSETS: ", data.assets)
                     readFile(data.assets[0].uri)
-                        .then(text => { file_content(JSON.parse(text)) })
+                        .then(text => {
+                            file_content(JSON.parse(text))
+                        })
                 }
             })
     }
 
-    return (<>
-        <Pressable
-            onPress={() => {
-                if (playerData && playerData.cards_in_game.length == 0) {
-                    setShowModal(true)
-                } else {
-                    ToastAndroid.show('Remova todas suas cartas da mesa.', ToastAndroid.SHORT)
-                }
-            }}
-        >
-            <View style={{
-                justifyContent: "center", alignItems: "center",
-            }}>
-                    <MaterialCommunityIcons name="cards" size={36} />
-            </View>
-        </Pressable>
+    return (
         <ThemedModal
             title='Escolha o Deck'
-            visible={showModal}
             closeModal={() => {
-                setShowModal(false)
                 setCardList([])
+                setShowDeckLoader('')
             }}
             dismissable
             backgroundTransparent
         >
-            <ThemedText>{`Escolha o Deck para as cartas: ${card_family}`}</ThemedText>
             {cardList.length > 0
-                ? <ScrollView
-                    contentContainerStyle={{
-                        flexDirection: 'row',
-                        flexWrap: 'wrap',
-
-                    }}
-                >
-                    {cardList.map((card, _index) => (
-                        <ThemedText key={_index} >{_index + 1}: {card} </ThemedText>
-                    ))}
-                </ScrollView>
+                ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'center', maxHeight: '80%' }}>
+                    <ThemedText>{`${cardList.length} Cartas Carregadas`}</ThemedText>
+                    <ScrollView
+                        contentContainerStyle={{
+                            flexDirection: 'row',
+                            flexWrap: 'wrap',
+                            justifyContent: "space-evenly",
+                            rowGap: 8,
+                        }}
+                    >
+                        {cardList.map((card, _index) => (
+                            <PreloadedCard
+                                key={_index}
+                                card_slug={card}
+                                selectedCardSlug={selectedCardSlug}
+                                setSelectedCardSlug={setSelectedCardSlug}
+                            />
+                        ))}
+                    </ScrollView>
+                </View>
                 : <>
+                    <ThemedText>{`Escolha o Deck para as cartas: ${card_family}`}</ThemedText>
                     <Pressable
                         onPress={() => {
                             Linking.canOpenURL(`https://costamateus.com.br/faithbattle/deck`).then(() => {
@@ -150,7 +162,6 @@ export default function DeckLoader({ sendToWS, card_family }: { sendToWS: (data:
                             }
                         })
                         setCardList([])
-                        setShowModal(false)
                     }}
                 >
                     <ThemedView style={{
@@ -167,5 +178,48 @@ export default function DeckLoader({ sendToWS, card_family }: { sendToWS: (data:
                 </Pressable>
             </View>
         </ThemedModal>
-    </>)
+    )
+}
+
+function PreloadedCard({ card_slug, selectedCardSlug, setSelectedCardSlug }: {
+    card_slug: string,
+    selectedCardSlug: string,
+    setSelectedCardSlug: (card_slug: string) => void
+}) {
+    const appData = useSelector((state: RootReducer) => state.appReducer.data)
+    const [media64, setMedia64] = useState("")
+    appData.selected_game_details?.deckType.forEach(
+        deck => deck.cards.forEach(
+            card => {
+                if (card_slug === card.card_slug) {
+                    getMediaBase64(card.card_image_mini).then(text64 => setMedia64(text64))
+                }
+            }
+        )
+    )
+
+    return (
+        <Pressable
+            onPress={() => {
+                if (selectedCardSlug === card_slug) {
+                    setSelectedCardSlug('')
+                } else {
+                    setSelectedCardSlug(card_slug)
+                }
+            }}
+        >
+            {media64 &&
+                <Image
+                    style={{
+                        height: selectedCardSlug === card_slug ? 200 : 50,
+                        width: selectedCardSlug === card_slug ? 144 : 36,
+                        borderRadius: 8, borderColor: '#555', borderWidth: 2
+                    }}
+                    source={{
+                        uri: media64
+                    }}
+                />
+            }
+        </Pressable>
+    )
 }
