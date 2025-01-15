@@ -4,7 +4,7 @@ import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
 
 import useAppWebSocket from '@/hooks/useAppWebSocket'
 import { RootReducer } from "@/store";
-import { setPage } from "@/store/reducers/appReducer";
+import { setPage, addNotification } from "@/store/reducers/appReducer";
 
 import { ConnectionStatus } from "@/components/connectionSpot";
 import { ThemedModal } from "@/components/themed/ThemedModal";
@@ -17,11 +17,13 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import Table from "@/components/game/Table";
 import Header from "@/components/game/Header";
 import { ThemedView } from "@/components/themed/ThemedView";
+import NotificationContainer from "@/components/game/GameNotifications";
 
 
 export default function Game() {
     const dispatch = useDispatch();
     const appData = useSelector((state: RootReducer) => state.appReducer.data)
+
     const [creatingRoom, setCreatingRoom] = useState(false)
     const [requestRoomPassword, setRequestRoomPassword] = useState(false)
     const [roomPassword, setRoomPassword] = useState('')
@@ -51,15 +53,73 @@ export default function Game() {
         // return () => { clearInterval(refresh) }
     }, [])
 
+    // Create notifications
+    useEffect(() => {
+        if (WS.lastJsonMessage) {
+            const data_command = WS.lastJsonMessage.data_command
+            if (data_command) {
+                const player_trigger_id = WS.lastJsonMessage.player_trigger_id
+                let _notification: GameNotification = {
+                    data_command: data_command,
+                    content: '',
+                    player_trigger_id: player_trigger_id,
+                    title: "",
+                    id: Date.now(),
+                }
+                switch (data_command) {
+                    case 'leave_match':
+                        _notification.title = `Sair da Partido.`
+                        _notification.content = `O jogador ${player_trigger_id} deixou a partida.`
+                        break;
+                    case 'set_deck':
+                        _notification.title = `Mudança de Deck.`
+                        _notification.content = `O jogador ${player_trigger_id} mudou o Deck.`
+                        break;
+                    case 'give_card':
+                        _notification.title = `Compra de Carta.`
+                        _notification.content = `O jogador ${player_trigger_id} comprou uma carta.`
+                        break;
+                    case 'shuffle_card':
+                        _notification.title = `Embaralhou Deck.`
+                        _notification.content = `O jogador ${player_trigger_id} embaralhou o Deck.`
+                        break;
+                    case 'get_card':
+                        _notification.title = `Escolheu uma Carta.`
+                        _notification.content = `O jogador ${player_trigger_id} Escolheu uma carta.`
+                        break;
+                    case 'change_faith_points':
+                        _notification.title = `Alterou seus Pontos.`
+                        _notification.content = `O jogador ${player_trigger_id} alterou seus pontos.`
+                        break;
+                    case 'back_to_deck':
+                        _notification.title = `Devolveu uma carta.`
+                        _notification.content = `O jogador ${player_trigger_id} devolveu uma carta.`
+                        break;
+                    case 'change_card_owner':
+                        _notification.title = `Troca de Dono.`
+                        _notification.content = `O jogador ${player_trigger_id} trocou a carta.`
+                        break;
+                    default:
+                        return;
+                }
+                dispatch(addNotification(_notification))
+                console.log("WS.lastJsonMessage", WS.lastJsonMessage)
+                console.log(_notification)
+            }
+        }
+    }, [WS.lastJsonMessage])
+
+
     if (game.players_stats.length > 0) {
         return (
             <>
-
                 <View style={{ zIndex: 999, backgroundColor: 'white' }}>
                     <Header sendWS={sendDataToWS} />
                 </View>
                 <ConnectionStatus wsState={game.connection_status} />
                 <Table sendWS={sendDataToWS} />
+                {/* <GameRequest sendWS={sendDataToWS} /> */}
+                <NotificationContainer />
             </>
         )
     }
@@ -171,7 +231,7 @@ export default function Game() {
                         })
                     }}
                 >
-                    <ThemedText style={{textAlign:'center'}}>Refresh</ThemedText>
+                    <ThemedText style={{ textAlign: 'center' }}>Refresh</ThemedText>
                 </Pressable>
                 {game.room_list &&
                     <View
@@ -260,6 +320,7 @@ export default function Game() {
             {game.match_id !== '' &&
                 <Room sendWS={sendDataToWS} />
             }
+            <NotificationContainer />
         </ThemedView>
     )
 }
