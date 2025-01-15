@@ -6,6 +6,7 @@ class Game {
     players: number[] = []
     players_ready: number[] = []
     players_stats: PlayersInMatchApiProps[] = []
+    cards_processed_media = new Map()
 
     handleWS(incoming: WebSocketData) {
         switch (incoming.data_type) {
@@ -25,6 +26,7 @@ class Game {
                 console.log(this)
                 break;
             case 'match_data':
+                console.log('data_command - ', incoming.data_command)
                 if (incoming.data_command === 'match_start') {
                     console.log('Iniciando a Partida')
                     const match_data = incoming.data as MatchAPI
@@ -40,12 +42,15 @@ class Game {
                     player_data!.cards_deck = incoming.data.player_stats!.cards_deck
                     player_data!.faith_points = incoming.data.player_stats!.faith_points
                 } else if (incoming.data_command === 'leave_match') {
-                    this.leave_room()
+                    if (!incoming.data) {
+                        this.leave_room()
+
+                    }
                 }
             default:
                 break;
         }
-        // console.log('game: ', game)
+        // console.log('requests: ', this.requests)
     }
 
     reset() {
@@ -69,4 +74,5 @@ class Game {
         return player_data
     }
 }
+
 export const game = new Game()

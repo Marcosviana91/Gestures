@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, Image, Pressable, ScrollView, Platform, TextInput, useColorScheme, StyleSheet } from 'react-native';
+import { View, Text, Image, Pressable, ScrollView, Platform, TextInput, useColorScheme, StyleSheet, ToastAndroid } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
@@ -15,8 +15,7 @@ import { ThemedView } from '../themed/ThemedView';
 import { ThemedText } from '../themed/ThemedText';
 
 import { getMediaBase64 } from '@/utils/FileSystem/Media';
-import { FontAwesome6, Ionicons, AntDesign } from '@expo/vector-icons';
-import DeckLoader from './DeckLoader';
+import { FontAwesome6, Ionicons, AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 
 type Props = {
     card_id: string,
@@ -28,6 +27,7 @@ type Props = {
 export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
     // console.log('Renderizou  card')
     const userData = useSelector((state: RootReducer) => state.dataAuthReducer.data)
+    const dataAuthReducer = useSelector((state: RootReducer) => state.dataAuthReducer.data)
     const deckType = useSelector((state: RootReducer) => state.appReducer.data).selected_game_details?.deckType!;
     const player_card_id = card_id.split('_')[0]
     const player_data = game.getPlayerData(Number(player_card_id))
@@ -37,6 +37,7 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
     const [verso_image64, setVerso_image64] = useState('')
     const [showCardMenu, setShowCardMenu] = useState(false)
     const theme = useColorScheme() // light | dark
+    const rotate_value = useSharedValue(0)
 
     // console.log("card", card)
     const card_is_mine = String(userData.id) === card?.in_game_id.split('_')[0]
@@ -93,11 +94,26 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
     }, [menuId])
 
     // Faz a carta aparecer por cima da outra ao abrir o menu
+    // Gira a carta para o jogador vê-la corretamente enquanto o menu estiver aberto
     useEffect(() => {
         if (showCardMenu) {
             zIndex.value = 1
+
+            const card_oponent_index = oponentes_list.findIndex((id) => id == Number(player_card_id))
+            if (card_oponent_index >= 0) {
+                const rotate_step = (360 / (oponentes_list.length + 1))
+                const rotate_total = rotate_step * (card_oponent_index + 1)
+                if (rotate_total > 180) {
+                    rotate_value.value = withTiming(rotate_total - 360)
+                } else {
+                    rotate_value.value = withTiming(rotate_total)
+
+                }
+            }
+
         } else {
             zIndex.value = 0
+            rotate_value.value = withTiming(0)
         }
     }, [showCardMenu])
 
@@ -137,6 +153,17 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
             }
         }
     }, [selectedInnerCard])
+
+    function reorderOponentList() {
+        const my_position_in_list = game.players.findIndex(str => str === dataAuthReducer.id)
+        const __temp_array_start = game.players.slice(0, my_position_in_list)
+        const __temp_array_end = game.players.slice(my_position_in_list + 1)
+        return [...__temp_array_end, ...__temp_array_start]
+    }
+    const oponentes_list = reorderOponentList()
+
+
+
 
     function updateCardProps() {
         checkYposition()
@@ -289,11 +316,10 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
 
     const showCardMenuGesture = Gesture.LongPress()
         .onStart(() => {
-            if (card_is_mine) {
-                console.log("SHOW CARD MENU")
-                setMenuId(_card.in_game_id)
-                setShowCardMenu(!showCardMenu)
-            }
+            console.log("SHOW CARD MENU")
+            setMenuId(_card.in_game_id)
+            setShowCardMenu(!showCardMenu)
+
         }).runOnJS(true)
 
     const cardGestures = Gesture.Race(tapCard, drag, showCardMenuGesture)
@@ -438,12 +464,16 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
             zIndex: _card.where_i_am === 'deck' ? -1 : zIndex.value,
             transform: [
                 {
-                    scale: withTiming(isCollided ? 0.8 : 1, { duration: 50 })
+                    scale: withTiming(isCollided ? 0.8 : 1, { duration: 50 }),
                 },
+                {
+                    rotate: -rotate_value.value + 'deg'
+                }
             ]
         };
     });
 
+    // oponentes_list.findIndex((id)=>id == Number(player_card_id))
     const rotateContainerStyle = useAnimatedStyle(() => {
         return {
             transform: [
@@ -858,50 +888,50 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
                             <>
                                 {/* Esquerdos */}
                                 {/* 0 */}
-                                {_card.tags[0] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[0] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#fff',
                                     top: 0,
                                     left: -4,
                                 }]} />}
                                 {/* 1 */}
-                                {_card.tags[1] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[1] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#f0f',
                                     top: 15,
                                     left: -4,
                                 }]} />}
                                 {/* 2 */}
-                                {_card.tags[2] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[2] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#000',
                                     top: 30,
                                     left: -4,
                                 }]} />}
                                 {/* 3 */}
-                                {_card.tags[3] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[3] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#00f',
                                     top: 45,
                                     left: -4,
                                 }]} />}
                                 {/* Direitos */}
                                 {/* 4 */}
-                                {_card.tags[4] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[4] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#f00',
                                     top: 0,
                                     right: -4,
                                 }]} />}
                                 {/* 5 */}
-                                {_card.tags[5] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[5] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#0f0',
                                     top: 15,
                                     right: -4,
                                 }]} />}
                                 {/* 6 */}
-                                {_card.tags[6] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[6] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#0ff',
                                     top: 30,
                                     right: -4,
                                 }]} />}
                                 {/* 7 */}
-                                {_card.tags[7] !== '' && <View style={[styles.cardTags,{
+                                {_card.tags[7] !== '' && <View style={[styles.cardTags, {
                                     backgroundColor: '#ff0',
                                     top: 45,
                                     right: -4,
@@ -923,102 +953,161 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
                     </Animated.View>
                     {/* Card Menu */}
                     {showCardMenu &&
-                        <View style={{
-                            position: 'absolute',
-                            width: '100%', height: '100%',
-                            zIndex: 10
-                        }}>
-                            {/* Botão para revelar a carta */}
-                            <Pressable
-                                onPress={() => {
-                                    console.log("REVELAR CARTAS")
-                                    setShowCardMenu(false)
-                                    sendToWS({
-                                        data_type: 'match_data',
-                                        data_command: 'toggle_card_visibility',
-                                        data: {
-                                            match_id: game.match_id,
-                                            card: _card,
-                                        }
-                                    })
-                                }}
-                                style={{
-                                    position: 'absolute', top: '-70%',
-                                    width: '100%', height: '70%',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: '#fff6',
-                                    borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                }}
-                            >
-                                <Ionicons name="eye" size={36} color="black" />
-                            </Pressable>
-                            {/* Botão para girar a carta para esquerda */}
-                            <Pressable
-                                onPress={() => {
-                                    console.log("GIRAR CARTA PARA ESQUERDA")
-                                    sendToWS({
-                                        data_type: 'match_data',
-                                        data_command: 'rotate_card',
-                                        data: {
-                                            match_id: game.match_id,
-                                            card: _card,
-                                            faith_points: -1
-                                        }
-                                    })
-                                    setShowCardMenu(false)
-                                }}
-                                style={{
-                                    position: 'absolute', top: '15%', left: '-100%',
-                                    width: '100%', height: '70%',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: '#fff6',
-                                    borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                }}
-                            >
-                                <FontAwesome6 name="rotate-left" size={36} color="black" />
-                            </Pressable>
-                            {/* Botão para girar a carta para direita */}
-                            <Pressable
-                                onPress={() => {
-                                    console.log("GIRAR CARTA PARA DIREITA")
-                                    sendToWS({
-                                        data_type: 'match_data',
-                                        data_command: 'rotate_card',
-                                        data: {
-                                            match_id: game.match_id,
-                                            card: _card,
-                                            faith_points: 1
-                                        }
-                                    })
-                                    setShowCardMenu(false)
-                                }}
-                                style={{
-                                    position: 'absolute', top: '15%', right: '-100%',
-                                    width: '100%', height: '70%',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: '#fff6',
-                                    borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                }}
-                            >
-                                <FontAwesome6 name="rotate-right" size={36} color="black" />
-                            </Pressable>
-                            {/* Botão inferior Pinos) */}
-                            <Pressable
-                                onPress={() => {
-                                    console.log("VER PINOS")
-                                    setShowCardMenu(false)
-                                    setShowPinsModal(true)
-                                }}
-                                style={{
-                                    position: 'absolute', top: '100%', width: '100%', height: '70%',
-                                    alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: '#fff6',
-                                    borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                }}
-                            >
-                                <AntDesign name="tags" size={36} color="black" />
-                            </Pressable>
-                        </View>
+                        <>{card_is_mine
+                            // My Card Menu
+                            ? <View style={{
+                                position: 'absolute',
+                                width: '100%', height: '100%',
+                                zIndex: 10
+                            }}>
+                                {/* Botão para revelar a carta */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("REVELAR CARTAS")
+                                        setShowCardMenu(false)
+                                        sendToWS({
+                                            data_type: 'match_data',
+                                            data_command: 'toggle_card_visibility',
+                                            data: {
+                                                match_id: game.match_id,
+                                                card: _card,
+                                            }
+                                        })
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '-70%',
+                                        width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <Ionicons name="eye" size={36} color="black" />
+                                </Pressable>
+                                {/* Botão para girar a carta para esquerda */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("GIRAR CARTA PARA ESQUERDA")
+                                        sendToWS({
+                                            data_type: 'match_data',
+                                            data_command: 'rotate_card',
+                                            data: {
+                                                match_id: game.match_id,
+                                                card: _card,
+                                                faith_points: -1
+                                            }
+                                        })
+                                        setShowCardMenu(false)
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '15%', left: '-100%',
+                                        width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <FontAwesome6 name="rotate-left" size={36} color="black" />
+                                </Pressable>
+                                {/* Botão para girar a carta para direita */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("GIRAR CARTA PARA DIREITA")
+                                        sendToWS({
+                                            data_type: 'match_data',
+                                            data_command: 'rotate_card',
+                                            data: {
+                                                match_id: game.match_id,
+                                                card: _card,
+                                                faith_points: 1
+                                            }
+                                        })
+                                        setShowCardMenu(false)
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '15%', right: '-100%',
+                                        width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <FontAwesome6 name="rotate-right" size={36} color="black" />
+                                </Pressable>
+                                {/* Botão inferior Pinos) */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("VER PINOS")
+                                        setShowCardMenu(false)
+                                        setShowPinsModal(true)
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '100%', width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <AntDesign name="tags" size={36} color="black" />
+                                </Pressable>
+                            </View>
+                            // Enemy Card Menu
+                            : <View style={{
+                                position: 'absolute',
+                                width: '100%', height: '100%',
+                                zIndex: 10,
+                            }}>
+                                {/* Botão para revelar a carta */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("SOLICITAR REVELAR CARTAS")
+                                        setShowCardMenu(false)
+                                        sendToWS({
+                                            data_type: 'match_data',
+                                            data_command: 'request_toggle_card_visibility',
+                                            data: {
+                                                match_id: game.match_id,
+                                                card: _card,
+                                            },
+                                            player_id: Number(player_card_id)
+                                        })
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '-70%',
+                                        width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <Ionicons name="eye" size={36} color="black" />
+                                </Pressable>
+                                {/* Botão Trocar dono da carta) */}
+                                <Pressable
+                                    onPress={() => {
+                                        console.log("SOLICITAR MUDAR DONO DA CARTA")
+                                        setShowCardMenu(false)
+                                        sendToWS({
+                                            data_type: 'match_data',
+                                            data_command: 'request_change_card_owner',
+                                            data: {
+                                                match_id: game.match_id,
+                                                card: _card,
+                                            },
+                                            player_id: Number(player_card_id)
+                                        })
+                                    }}
+                                    style={{
+                                        position: 'absolute', top: '100%', width: '100%', height: '70%',
+                                        alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: '#fff6',
+                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                    }}
+                                >
+                                    <MaterialCommunityIcons name="account-switch" size={36} color="black" />
+                                </Pressable>
+                            </View>
+                        }</>
                     }
                     {/* Tags Form */}
                     <ThemedModal

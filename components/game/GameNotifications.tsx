@@ -11,6 +11,8 @@ import { RootReducer } from "@/store";
 export default function NotificationContainer() {
     const appData = useSelector((state: RootReducer) => state.appReducer.data)
 
+    if (!appData.game.nofifications) { return undefined}
+
     return (
         <View style={{
             position: 'absolute', bottom: 12, right: 12,
@@ -18,7 +20,7 @@ export default function NotificationContainer() {
             rowGap: 4
         }}>
             {appData.game.nofifications.map(notif => (
-                <Notification key={notif.id} id={notif.id} content={notif.content} data_command={notif.data_command} player_trigger_id={1} title={notif.title} />
+                <Notification key={notif.id} id={notif.id} content={notif.content} data_command={notif.data_command} player_id={1} title={notif.title} />
             ))}
 
 

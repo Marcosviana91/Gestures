@@ -2,8 +2,6 @@
 declare type PlayersInMatchApiProps = {
     'player_id': number,
     'faith_points': number,
-    'total_wisdom_points': number,
-    'available_wisdom_points': number,
     'cards_in_game': CardProps[],
     'cards_deck': CardProps[],
 }
@@ -14,7 +12,7 @@ declare type CardProps = {
     slug: string,
     in_game_id: string,
     card_family: string,
-    card_type: string,
+    // card_type: string,
 
     // Dados vem da API e PODEM mudar durante o jogo
     // deck : ninguém sabe qual é a carta;
@@ -41,7 +39,7 @@ declare type CardMatchReducerProps = {
 }
 
 declare type WebSocketData = {
-    data_type: string //'accepted' | 'start' | 'card_move' | 'give_card' | 'back_to_deck'  | 'change_faith_points';
+    data_type: string
     data_command: string,
     data: {
         match_id?: string,
@@ -111,6 +109,7 @@ declare type GameDetailsAPI = {
         },
     ]
 }
+
 // https://costamateus.com.br/faithbattle/deck
 declare type deckBuilderFromMateusCosta = [
     {
@@ -148,3 +147,11 @@ declare type deckBuilderFromMateusCosta = [
         count: number // quantidade de repetições 1 ou 2
     },
 ]
+
+declare type GameNotification = {
+    id?: number,
+    data_command: string,
+    title: string,
+    player_id: number,
+    content: string,
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { View, Text, Pressable, StyleSheet, TextInput } from "react-native";
+import { View, Pressable, TextInput } from "react-native";
 
 import useAppWebSocket from '@/hooks/useAppWebSocket'
 import { RootReducer } from "@/store";
@@ -42,7 +42,7 @@ export default function Game() {
         dispatch(setPage('home'))
     }
 
-    useEffect(() => {
+    // useEffect(() => {
         // const refresh = setInterval(() => {
         //     sendDataToWS({
         //         'data_type': 'game_server',
@@ -51,53 +51,54 @@ export default function Game() {
         // }, 1500);
 
         // return () => { clearInterval(refresh) }
-    }, [])
+    // }, [])
 
     // Create notifications
     useEffect(() => {
-        if (WS.lastJsonMessage) {
-            const data_command = WS.lastJsonMessage.data_command
-            if (data_command) {
-                const player_trigger_id = WS.lastJsonMessage.player_trigger_id
+        const WS_DATA = WS.lastJsonMessage as WebSocketData
+        if (WS_DATA) {
+            if (WS_DATA.data_type === 'game_notification') {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
                 let _notification: GameNotification = {
-                    data_command: data_command,
+                    data_command: WS_DATA.data_command,
                     content: '',
-                    player_trigger_id: player_trigger_id,
-                    title: "",
+                    player_id: WS_DATA.player_id!,
+                    title: '',
                     id: Date.now(),
                 }
-                switch (data_command) {
+                switch (WS_DATA.data_command) {
                     case 'leave_match':
                         _notification.title = `Sair da Partido.`
-                        _notification.content = `O jogador ${player_trigger_id} deixou a partida.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} deixou a partida.`
                         break;
                     case 'set_deck':
                         _notification.title = `Mudança de Deck.`
-                        _notification.content = `O jogador ${player_trigger_id} mudou o Deck.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} mudou o Deck.`
                         break;
                     case 'give_card':
                         _notification.title = `Compra de Carta.`
-                        _notification.content = `O jogador ${player_trigger_id} comprou uma carta.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} comprou uma carta.`
                         break;
                     case 'shuffle_card':
                         _notification.title = `Embaralhou Deck.`
-                        _notification.content = `O jogador ${player_trigger_id} embaralhou o Deck.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} embaralhou o Deck.`
                         break;
                     case 'get_card':
                         _notification.title = `Escolheu uma Carta.`
-                        _notification.content = `O jogador ${player_trigger_id} Escolheu uma carta.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} Escolheu uma carta.`
                         break;
                     case 'change_faith_points':
                         _notification.title = `Alterou seus Pontos.`
-                        _notification.content = `O jogador ${player_trigger_id} alterou seus pontos.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} alterou seus pontos.`
                         break;
                     case 'back_to_deck':
                         _notification.title = `Devolveu uma carta.`
-                        _notification.content = `O jogador ${player_trigger_id} devolveu uma carta.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} devolveu uma carta.`
                         break;
                     case 'change_card_owner':
                         _notification.title = `Troca de Dono.`
-                        _notification.content = `O jogador ${player_trigger_id} trocou a carta.`
+                        _notification.content = `O jogador ${WS_DATA.player_id} trocou a carta.`
                         break;
                     default:
                         return;
