@@ -41,10 +41,19 @@ class Game {
                     player_data!.cards_in_game = incoming.data.player_stats!.cards_in_game
                     player_data!.cards_deck = incoming.data.player_stats!.cards_deck
                     player_data!.faith_points = incoming.data.player_stats!.faith_points
+                } else if (incoming.data_command === 'update_players') {
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    const players_data: PlayersInMatchApiProps[] = incoming.data.player_stats!
+                    for (let _player of players_data) {
+                        const player_data = this.getPlayerData(_player.player_id)
+                        player_data!.cards_in_game = _player.cards_in_game
+                        player_data!.cards_deck = _player.cards_deck
+                        player_data!.faith_points = _player.faith_points
+                    }
                 } else if (incoming.data_command === 'leave_match') {
                     if (!incoming.data) {
                         this.leave_room()
-
                     }
                 }
             default:

@@ -1052,61 +1052,67 @@ export default function Card({ card_id, sendToWS, menuId, setMenuId }: Props) {
                                 </Pressable>
                             </View>
                             // Enemy Card Menu
-                            : <View style={{
-                                position: 'absolute',
-                                width: '100%', height: '100%',
-                                zIndex: 10,
-                            }}>
-                                {/* Botão para revelar a carta */}
-                                <Pressable
-                                    onPress={() => {
-                                        console.log("SOLICITAR REVELAR CARTAS")
-                                        setShowCardMenu(false)
-                                        sendToWS({
-                                            data_type: 'match_data',
-                                            data_command: 'request_toggle_card_visibility',
-                                            data: {
-                                                match_id: game.match_id,
-                                                card: _card,
-                                            },
-                                            player_id: Number(player_card_id)
-                                        })
-                                    }}
-                                    style={{
-                                        position: 'absolute', top: '-70%',
-                                        width: '100%', height: '70%',
-                                        alignItems: 'center', justifyContent: 'center',
-                                        backgroundColor: '#fff6',
-                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                    }}
-                                >
-                                    <Ionicons name="eye" size={36} color="black" />
-                                </Pressable>
-                                {/* Botão Trocar dono da carta) */}
-                                <Pressable
-                                    onPress={() => {
-                                        console.log("SOLICITAR MUDAR DONO DA CARTA")
-                                        setShowCardMenu(false)
-                                        sendToWS({
-                                            data_type: 'match_data',
-                                            data_command: 'request_change_card_owner',
-                                            data: {
-                                                match_id: game.match_id,
-                                                card: _card,
-                                            },
-                                            player_id: Number(player_card_id)
-                                        })
-                                    }}
-                                    style={{
-                                        position: 'absolute', top: '100%', width: '100%', height: '70%',
-                                        alignItems: 'center', justifyContent: 'center',
-                                        backgroundColor: '#fff6',
-                                        borderWidth: 1, borderColor: 'black', borderRadius: 6
-                                    }}
-                                >
-                                    <MaterialCommunityIcons name="account-switch" size={36} color="black" />
-                                </Pressable>
-                            </View>
+                            : <>
+                                {_card.where_i_am === 'hand'
+                                    ? <></>
+                                    : <View style={{
+                                        position: 'absolute',
+                                        width: '100%', height: '100%',
+                                        zIndex: 10,
+                                    }}>
+                                        {/* Botão para revelar a carta */}
+                                        {/* <Pressable
+                                onPress={() => {
+                                    console.log("SOLICITAR REVELAR CARTAS")
+                                    setShowCardMenu(false)
+                                    sendToWS({
+                                        data_type: 'match_data',
+                                        data_command: 'request_toggle_card_visibility',
+                                        data: {
+                                            match_id: game.match_id,
+                                            card: _card,
+                                        },
+                                        player_id: Number(player_card_id)
+                                    })
+                                }}
+                                style={{
+                                    position: 'absolute', top: '-70%',
+                                    width: '100%', height: '70%',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    backgroundColor: '#fff6',
+                                    borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                }}
+                            >
+                                <Ionicons name="eye" size={36} color="black" />
+                            </Pressable> */}
+                                        {/* Botão Trocar dono da carta) */}
+                                        <Pressable
+                                            onPress={() => {
+                                                console.log("SOLICITAR MUDAR DONO DA CARTA")
+                                                setShowCardMenu(false)
+                                                sendToWS({
+                                                    data_type: 'match_data',
+                                                    data_command: 'request_change_card_owner',
+                                                    data: {
+                                                        match_id: game.match_id,
+                                                        card: _card,
+                                                        player_target_id: Number(player_card_id),
+                                                        player_trigger_id: userData.id,
+                                                    },
+                                                })
+                                            }}
+                                            style={{
+                                                position: 'absolute', top: '100%', width: '100%', height: '70%',
+                                                alignItems: 'center', justifyContent: 'center',
+                                                backgroundColor: '#fff6',
+                                                borderWidth: 1, borderColor: 'black', borderRadius: 6
+                                            }}
+                                        >
+                                            <MaterialCommunityIcons name="account-switch" size={36} color="black" />
+                                        </Pressable>
+                                    </View>
+                                }
+                            </>
                         }</>
                     }
                     {/* Tags Form */}

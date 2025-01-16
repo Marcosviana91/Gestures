@@ -48,6 +48,8 @@ declare type WebSocketData = {
         card?: CardProps,
         faith_points?: number,
         card_list?: string[]
+        player_target_id?: number
+        player_trigger_id?: number
     },
     player_id?: number
 }
@@ -154,4 +156,13 @@ declare type GameNotification = {
     title: string,
     player_id: number,
     content: string,
+}
+
+declare type GameRequest = {
+    data_command: string,
+    title: string,
+    player_trigger_id: number,
+    player_target_id: number,
+    content: string,
+    data: WebSocketData,
 }

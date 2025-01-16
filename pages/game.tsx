@@ -4,7 +4,7 @@ import { View, Pressable, TextInput } from "react-native";
 
 import useAppWebSocket from '@/hooks/useAppWebSocket'
 import { RootReducer } from "@/store";
-import { setPage, addNotification } from "@/store/reducers/appReducer";
+import { setPage, addNotification, setRequest } from "@/store/reducers/appReducer";
 
 import { ConnectionStatus } from "@/components/connectionSpot";
 import { ThemedModal } from "@/components/themed/ThemedModal";
@@ -18,6 +18,7 @@ import Table from "@/components/game/Table";
 import Header from "@/components/game/Header";
 import { ThemedView } from "@/components/themed/ThemedView";
 import NotificationContainer from "@/components/game/GameNotifications";
+import GameRequest from "@/components/game/GameRequest";
 
 
 export default function Game() {
@@ -43,17 +44,17 @@ export default function Game() {
     }
 
     // useEffect(() => {
-        // const refresh = setInterval(() => {
-        //     sendDataToWS({
-        //         'data_type': 'game_server',
-        //         'data_command': 'get_rooms',
-        //     })
-        // }, 1500);
+    // const refresh = setInterval(() => {
+    //     sendDataToWS({
+    //         'data_type': 'game_server',
+    //         'data_command': 'get_rooms',
+    //     })
+    // }, 1500);
 
-        // return () => { clearInterval(refresh) }
+    // return () => { clearInterval(refresh) }
     // }, [])
 
-    // Create notifications
+    // Create notifications and request
     useEffect(() => {
         const WS_DATA = WS.lastJsonMessage as WebSocketData
         if (WS_DATA) {
@@ -106,6 +107,24 @@ export default function Game() {
                 dispatch(addNotification(_notification))
                 console.log("WS.lastJsonMessage", WS.lastJsonMessage)
                 console.log(_notification)
+            } else if (WS_DATA.data_type === 'match_data' && WS_DATA.data_command.startsWith('request_')) {
+                let new_request: GameRequest = {
+                    title:'',
+                    content:"",
+                    data_command: WS_DATA.data_command,
+                    player_target_id: WS_DATA.data.player_target_id!,
+                    player_trigger_id: WS_DATA.data.player_trigger_id!,
+                    data: WS_DATA
+                }
+                switch (WS_DATA.data_command) {
+                    case 'request_change_card_owner':
+                        new_request.title = "Dar a carta."
+                        new_request.content = `O jogador ${new_request.player_trigger_id} está solicitando a carta ${WS_DATA.data.card?.in_game_id}`
+                        dispatch(setRequest(new_request))
+                        break;
+                    default:
+                        break;
+                }
             }
         }
     }, [WS.lastJsonMessage])
@@ -119,7 +138,7 @@ export default function Game() {
                 </View>
                 <ConnectionStatus wsState={game.connection_status} />
                 <Table sendWS={sendDataToWS} />
-                {/* <GameRequest sendWS={sendDataToWS} /> */}
+                <GameRequest sendWS={sendDataToWS} />
                 <NotificationContainer />
             </>
         )
