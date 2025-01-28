@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/splash.jpg",
+        "foregroundImage": "./assets/images/splash2.jpg",
         "backgroundColor": "#ffffff"
       },
       "package": "com.marcosvianadev.gestures",
@@ -30,7 +30,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/icon.jpg"
+      "favicon": "./assets/images/icon2.jpg"
     },
     "plugins": [
       "expo-router",
