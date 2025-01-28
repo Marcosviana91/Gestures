@@ -99,6 +99,8 @@ export default function DeckLoader({ sendToWS, card_family, setShowDeckLoader }:
                         ))}
                     </ScrollView>
                 </View>
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
                 : <>
                     <ThemedText>{`Escolha o Deck para as cartas: ${card_family}`}</ThemedText>
                     <Pressable

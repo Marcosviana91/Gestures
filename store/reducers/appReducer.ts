@@ -7,7 +7,7 @@ type appConfig = {
         game: {
             board_id: number,
             nofifications: GameNotification[]
-            requests: WebSocketData | undefined,
+            requests: GameRequest | undefined,
         }
     }
 }
@@ -37,7 +37,7 @@ const dataAuthSlice = createSlice({
         setGameSettings: (state, action: PayloadAction<appConfig['data']['game']>) => {
             state.data.game = action.payload
         },
-        setRequest: (state, action: PayloadAction<WebSocketData | undefined>) => {
+        setRequest: (state, action: PayloadAction<GameRequest | undefined>) => {
             state.data.game.requests = action.payload
         },
         addNotification: (state, action: PayloadAction<GameNotification>) => {

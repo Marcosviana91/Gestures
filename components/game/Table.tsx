@@ -242,7 +242,7 @@ export default function Table({ sendWS }: { sendWS: (dict: {}) => void }) {
                                 <View style={{ zIndex: 10 }}>
                                     <Board player_id={dataAuthReducer.id} sendToWS={sendWS} />
                                 </View>
-                                {/* Oponente 1 */}
+                                {/* Oponentes */}
                                 {oponentes_list.map((oponente, _index) =>
                                     <View
                                         key={_index}
@@ -251,21 +251,6 @@ export default function Table({ sendWS }: { sendWS: (dict: {}) => void }) {
                                         <Board enemy player_id={oponente} sendToWS={sendWS} />
                                     </View>
                                 )}
-                                {/* <View style={EnemyBoardsPosition()[0]}>
-                                    <Board enemy player_name={oponentes_list[0]} sendToWS={sendMoveToServer} />
-                                </View> */}
-                                {/* Oponente 2 */}
-                                {/* {oponentes_list.length >= 2 &&
-                                    <View style={EnemyBoardsPosition()[1]}>
-                                        <Board enemy player_name={oponentes_list[1]} sendToWS={sendMoveToServer} />
-                                    </View>
-                                } */}
-                                {/* Oponente 3 */}
-                                {/* {oponentes_list.length >= 3 &&
-                                    <View style={EnemyBoardsPosition()[2]}>
-                                        <Board enemy player_name={oponentes_list[2]} sendToWS={sendMoveToServer} />
-                                    </View>
-                                } */}
                             </Animated.View>
                         </GestureDetector>
                     </Animated.View>

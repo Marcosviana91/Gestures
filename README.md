@@ -53,3 +53,6 @@ Join our community of developers creating universal apps.
 npx expo install expo-file-system
 
 eas build -p android --profile preview
+
+<!-- Linux Only -->
+eas build -p android --profile preview --local
